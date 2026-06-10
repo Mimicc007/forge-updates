@@ -1,0 +1,12 @@
+[
+  {
+    "version": "v0.1.1-alpha",
+    "date": "2026-06-11",
+    "title": "Initial Launch",
+    "type": "patch",
+    "downloadUrl": "REPLACE_THIS_WITH_YOUR_RELEASE_LINK_IN_THE_NEXT_STEP",
+    "changes": [
+      "Initial packaged release for testing."
+    ]
+  }
+]
