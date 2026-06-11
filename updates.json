@@ -21,10 +21,7 @@
       "Added UI updates and settings tab improvements",
       "Resolved background update check list reference errors"
     ]
-  }
-]
-
-[
+  },
   {
     "version": "v0.1.2-alpha",
     "date": "2026-06-11",
