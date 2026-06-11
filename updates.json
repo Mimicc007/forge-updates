@@ -4,7 +4,7 @@
     "date": "2026-06-11",
     "title": "Continuity Engine & Settings Polish",
     "type": "patch",
-    "downloadUrl": "https://raw.githubusercontent.com/Mimicc007/forge-updates/main/Forge-Setup-0.1.5-alpha.exe",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.1.5-alpha/Forge-Setup-0.1.5-alpha.exe",
     "changes": [
       "Upgraded Continuity view into a dedicated full page with active filters, quick nav, and resolution logs",
       "Added premium slide-in Ignis Continuity Alert popups when story conflicts are found",
@@ -17,7 +17,7 @@
     "date": "2026-06-11",
     "title": "Ignis Scene Mode & Continuity Patch",
     "type": "patch",
-    "downloadUrl": "https://raw.githubusercontent.com/Mimicc007/forge-updates/main/Forge-Setup-0.1.4-alpha.exe",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.1.4-alpha/Forge-Setup-0.1.4-alpha.exe",
     "changes": [
       "Added Ignis Scene Mode co-writing drawer with paragraph accept/reject logic",
       "Integrated smart Continuity Monitor checking for plot, timeline, and trait contradictions",
@@ -30,7 +30,7 @@
     "date": "2026-06-11",
     "title": "Living Document & Broken Links Patch",
     "type": "patch",
-    "downloadUrl": "https://raw.githubusercontent.com/Mimicc007/forge-updates/main/Forge-Setup-0.1.3-alpha.exe",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.1.3-alpha/Forge.Setup.0.1.3-alpha.exe",
     "changes": [
       "Upgraded Canvas notes to Quill editors, enabling bi-directional [[ autocomplete links",
       "Added Broken Links Detector tab to scan and repair missing page links",
