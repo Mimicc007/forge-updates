@@ -1,5 +1,31 @@
 [
   {
+    "version": "v0.1.3-alpha",
+    "date": "2026-06-11",
+    "title": "Living Document & Broken Links Patch",
+    "type": "patch",
+    "downloadUrl": "https://raw.githubusercontent.com/Mimicc007/forge-updates/main/Forge-Setup-0.1.3-alpha.exe",
+    "changes": [
+      "Upgraded Canvas notes to Quill editors, enabling bi-directional [[ autocomplete links",
+      "Added Broken Links Detector tab to scan and repair missing page links",
+      "Fixed Electron auto-updater file-locking crash during automatic restarts"
+    ]
+  },
+  {
+    "version": "v0.1.2-alpha",
+    "date": "2026-06-10",
+    "title": "Visual Improvements & Database Sync",
+    "type": "patch",
+    "downloadUrl": "https://raw.githubusercontent.com/Mimicc007/forge-updates/main/Forge-Setup-0.1.2-alpha.exe",
+    "changes": [
+      "Added UI updates and settings tab improvements",
+      "Resolved background update check list reference errors"
+    ]
+  }
+]
+
+[
+  {
     "version": "v0.1.2-alpha",
     "date": "2026-06-11",
     "title": "Initial Launch",
