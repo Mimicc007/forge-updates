@@ -852,7 +852,7 @@ export async function runPhase6() {
           }
           return null;
         },
-        placement: 'top',
+        placement: 'bottom',
         requireClickOnTarget: true,
         actionHint: "👆 Click on 'The Spark' beat card to continue",
         onTargetClick: () => {
@@ -891,7 +891,7 @@ export async function runPhase7() {
           }
           return null;
         },
-        placement: 'top',
+        placement: 'bottom',
         requireClickOnTarget: true,
         onTargetClick: () => {
           saveTutorialState({ active: true, currentPhase: 7, styleId });
@@ -913,7 +913,7 @@ export async function runPhase7() {
       {
         icon: '↕️',
         title: 'Plot Lane',
-        description: `Each beat is assigned to a **Plot Lane** (e.g. Main Plot, Character Arc, Lore Background) to keep parallel threads organized.`,
+        description: `Each beat is assigned to one of three **Plot Lanes** (Main Plot, Sub Plot, or World Event) to keep parallel threads organized.`,
         target: '#stc-edit-lane',
         placement: 'bottom',
         padding: 4
@@ -931,7 +931,7 @@ export async function runPhase7() {
         title: 'Task: Link your created entry',
         description: `Link the database entry you created earlier to this beat by **checking the box** next to its name.`,
         target: '#stc-chars',
-        placement: 'bottom',
+        placement: 'left',
         padding: 4,
         actionHint: '👆 Check the box next to your page entry in the list',
         checkTask: () => {
@@ -953,7 +953,8 @@ export async function runPhase7() {
       }
     ], {
       onFinish: () => {
-        tutorial.stop(true);
+        saveTutorialState({ active: true, currentPhase: 8, styleId });
+        runPhase8();
       }
     });
   }, 450);
@@ -993,7 +994,8 @@ export async function runPhase8() {
       }
     ], {
       onFinish: () => {
-        tutorial.stop(true);
+        saveTutorialState({ active: true, currentPhase: 8, styleId });
+        runPhase8();
       }
     });
   }, 450);
