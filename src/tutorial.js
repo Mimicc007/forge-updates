@@ -985,7 +985,7 @@ export async function runPhase8() {
           }
           return null;
         },
-        placement: 'top',
+        placement: 'bottom',
         actionHint: '🖱️ Double-click the beat card to open the canvas',
         checkTask: () => window.location.hash.includes('workspace/'),
         onTaskComplete: () => {
