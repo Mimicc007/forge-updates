@@ -343,6 +343,9 @@ class SpotlightTutorial {
       } else {
         el = step.target;
       }
+      if (el && typeof el === 'string') {
+        el = document.querySelector(el);
+      }
       if (el && (el === e.target || el.contains(e.target))) {
         if (step.onTargetClick) step.onTargetClick();
         if (this.isActive && this.steps[this.currentStepIndex] === step) {
@@ -558,6 +561,9 @@ class SpotlightTutorial {
         targetEl = document.querySelector(step.target);
       } else {
         targetEl = step.target;
+      }
+      if (targetEl && typeof targetEl === 'string') {
+        targetEl = document.querySelector(targetEl);
       }
       if (targetEl) {
         targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
