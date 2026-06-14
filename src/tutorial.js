@@ -1021,10 +1021,8 @@ export async function runPhase9() {
       {
         icon: '🎨',
         title: 'The Infinite Canvas',
-        description: `Welcome to the beat's infinite **Canvas**! Here you can pan, zoom, draw connection lines, and arrange ideas. Forge automatically seeded nodes for your beat synopsis and linked entries on this grid.`,
-        target: '.canvas-viewport',
-        placement: 'top',
-        padding: 0
+        description: `Welcome to the beat's infinite <strong>Canvas</strong>! Here you can pan, zoom, draw connection lines, and arrange ideas. Forge automatically seeded nodes for your beat synopsis and linked entries on this grid.`,
+        target: null
       },
       {
         icon: '📝',
@@ -1090,7 +1088,7 @@ export async function runPhase9() {
         {
           icon: '🛡️',
           title: 'Task: Add D&D Stat Block',
-          description: `Spawn a **D&D Stat Block** to track monster, NPC, or character statistics on the canvas.`,
+          description: `Spawn a <strong>D&D Stat Block</strong> to track monster, NPC, or character statistics on the canvas.`,
           target: '.canvas-add-node-btn[data-type="statblock"]',
           placement: 'bottom',
           requireClickOnTarget: true,
@@ -1098,9 +1096,17 @@ export async function runPhase9() {
           checkTask: () => !!document.querySelector('.canvas-node[data-type="statblock"]')
         },
         {
+          icon: '🛡️',
+          title: 'D&D Stat Block',
+          description: `This is your interactive <strong>D&D Stat Block</strong>. You can track HP, AC, abilities, saving throws, and click on skills or attacks to auto-roll them directly inside the app!`,
+          target: () => document.querySelector('.canvas-node[data-type="statblock"]'),
+          placement: 'right',
+          padding: 4
+        },
+        {
           icon: '⚔️',
           title: 'Task: Add Encounter Builder',
-          description: `Spawn an **Encounter Builder** to design combat encounters, track initiative, and balance difficulty.`,
+          description: `Spawn an <strong>Encounter Builder</strong> to design combat encounters, track initiative, and balance difficulty.`,
           target: '.canvas-add-node-btn[data-type="encounter"]',
           placement: 'bottom',
           requireClickOnTarget: true,
@@ -1108,14 +1114,30 @@ export async function runPhase9() {
           checkTask: () => !!document.querySelector('.canvas-node[data-type="encounter"]')
         },
         {
+          icon: '⚔️',
+          title: 'Encounter Builder',
+          description: `This is your <strong>Encounter Builder</strong>. Track initiative order, monitor combatant health, and automatically calculate combat difficulty ratings.`,
+          target: () => document.querySelector('.canvas-node[data-type="encounter"]'),
+          placement: 'right',
+          padding: 4
+        },
+        {
           icon: '🎲',
           title: 'Task: Open Dice Tray',
-          description: `Click the **Dice Tray** button to open the interactive 3D dice roller companion panel!`,
+          description: `Click the <strong>Dice Tray</strong> button to open the interactive 3D dice roller companion panel!`,
           target: '#canvas-dice-tray-btn',
           placement: 'bottom',
           requireClickOnTarget: true,
           actionHint: '👆 Click the "Dice Tray" button to open it',
           checkTask: () => !!document.getElementById('canvas-dice-panel')
+        },
+        {
+          icon: '🎲',
+          title: 'Dice Tray',
+          description: `This is the <strong>Dice Tray</strong>. Select the dice you want to roll, see physics-based 3D dice rolls on the screen, and track roll history with crit alerts!`,
+          target: '#canvas-dice-panel',
+          placement: 'left',
+          padding: 4
         }
       );
     } else if (styleId === 'gamedev') {
@@ -1123,7 +1145,7 @@ export async function runPhase9() {
         {
           icon: '🔄',
           title: 'Task: Add Behavior Node',
-          description: `Spawn a **Behavior Node** to flowchart state machines, player paths, or quest logic.`,
+          description: `Spawn a <strong>Behavior Node</strong> to flowchart state machines, player paths, or quest logic.`,
           target: '.canvas-add-node-btn[data-type="flowchart"]',
           placement: 'bottom',
           requireClickOnTarget: true,
@@ -1131,9 +1153,17 @@ export async function runPhase9() {
           checkTask: () => !!document.querySelector('.canvas-node[data-type="flowchart"]')
         },
         {
+          icon: '🔄',
+          title: 'Behavior Node',
+          description: `This is a <strong>Behavior Node</strong>. Use it to flowchart state machines, map player choice branches, or document complex game mechanics.`,
+          target: () => document.querySelector('.canvas-node[data-type="flowchart"]'),
+          placement: 'right',
+          padding: 4
+        },
+        {
           icon: '📈',
           title: 'Task: Add Progression Calc',
-          description: `Spawn a **Progression Calc** to model level-ups, stat growth, or economy scaling.`,
+          description: `Spawn a <strong>Progression Calc</strong> to model level-ups, stat growth, or economy scaling.`,
           target: '.canvas-add-node-btn[data-type="progression"]',
           placement: 'bottom',
           requireClickOnTarget: true,
@@ -1141,14 +1171,30 @@ export async function runPhase9() {
           checkTask: () => !!document.querySelector('.canvas-node[data-type="progression"]')
         },
         {
+          icon: '📈',
+          title: 'Progression Calc',
+          description: `This is a <strong>Progression Calculator</strong>. Plot curves to balance player level scaling, experience points, or resource economies.`,
+          target: () => document.querySelector('.canvas-node[data-type="progression"]'),
+          placement: 'right',
+          padding: 4
+        },
+        {
           icon: '🧮',
           title: 'Task: Open XP Solver',
-          description: `Click the **XP Solver** button to open the interactive game design math solver panel!`,
+          description: `Click the <strong>XP Solver</strong> button to open the interactive game design math solver panel!`,
           target: '#canvas-math-solver-btn',
           placement: 'bottom',
           requireClickOnTarget: true,
           actionHint: '👆 Click the "XP Solver" button to open it',
           checkTask: () => !!document.getElementById('canvas-math-panel')
+        },
+        {
+          icon: '🧮',
+          title: 'XP Solver',
+          description: `This is the <strong>XP Solver</strong> panel. Test out different formulas and immediately view calculations for level progression and player XP.`,
+          target: '#canvas-math-panel',
+          placement: 'left',
+          padding: 4
         }
       );
     } else {
@@ -1156,12 +1202,20 @@ export async function runPhase9() {
         {
           icon: '📈',
           title: 'Task: Open Act Pacing',
-          description: `Click the **Act Pacing** button to open the scene-by-scene narrative pacing tracker!`,
+          description: `Click the <strong>Act Pacing</strong> button to open the scene-by-scene narrative pacing tracker!`,
           target: '#canvas-pacing-tracker-btn',
           placement: 'bottom',
           requireClickOnTarget: true,
           actionHint: '👆 Click the "Act Pacing" button to open it',
           checkTask: () => !!document.getElementById('canvas-pacing-panel')
+        },
+        {
+          icon: '📈',
+          title: 'Act Pacing',
+          description: `This is the <strong>Act Pacing</strong> tracker. Visualize the dramatic tension curve and pacing across your entire story or screenplay.`,
+          target: '#canvas-pacing-panel',
+          placement: 'left',
+          padding: 4
         }
       );
     }
@@ -1170,7 +1224,7 @@ export async function runPhase9() {
     steps.push({
       icon: '🕸️',
       title: `Next: Open the ${terms.fate || 'Web of Fate'}`,
-      description: `Wonderful! You've explored the canvas tools. Now let's view your universe's connections in a project-wide physics graph. We will automatically navigate you to the **${terms.fate || 'Web of Fate'}** now!`,
+      description: `Wonderful! You've explored the canvas tools. Now let's view your universe's connections in a project-wide physics graph. We will automatically navigate you to the <strong>${terms.fate || 'Web of Fate'}</strong> now!`,
       target: null,
       onEnter: () => {
         tutorial.setTimeoutTracked(() => {
@@ -1188,6 +1242,7 @@ export async function runPhase9() {
     });
   }, 600);
 }
+
 
 // =================================══════════════════════════════════════════════
 // PHASE 10 — Web of Fate (Graph View)
