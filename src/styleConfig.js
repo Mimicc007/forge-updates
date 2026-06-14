@@ -467,7 +467,7 @@ export const STYLES = {
     // ── Terminology ────────────────────────────────────────────────────────
     terms: {
       dashboardTitle: 'Campaign Codex',
-      sidebarTitle: 'Adventure Codex',
+      sidebarTitle: 'Campaign Ledger',
       roadmap: 'Campaign Map',
       fate: 'Fate Web',
       characters: 'NPC Codex',

@@ -369,7 +369,10 @@ class SpotlightTutorial {
     // Update content
     this.popoverIcon.textContent = step.icon || '⚡';
     this.popoverTitle.textContent = step.title;
-    this.popoverDesc.innerHTML = step.description;
+    let desc = step.description || '';
+    desc = desc.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    desc = desc.replace(/`(.*?)`/g, '<code>$1</code>');
+    this.popoverDesc.innerHTML = desc;
 
     // Step counter
     this.popoverStep.textContent = `${this.currentStepIndex + 1} / ${this.steps.length}`;
@@ -591,19 +594,34 @@ export async function runPhase1() {
       description: `Let's find things quickly. Press **Ctrl + K** (or **Cmd + K** on Mac) to open the **Global Search** overlay, which lets you search across all entities instantly.`,
       target: null,
       actionHint: '⌨️ Press Ctrl + K (or Cmd + K) to open search',
-      checkTask: () => !!document.querySelector('.search-overlay') || !!document.querySelector('.search-container')
+      checkTask: () => !!document.querySelector('.search-overlay') || !!document.querySelector('.search-container'),
+      onTaskComplete: () => {
+        const overlay = document.querySelector('.search-overlay');
+        if (overlay) {
+          overlay.click();
+        }
+      }
+    },
+    {
+      icon: '🗃️',
+      title: 'Task: Open New Database Modal',
+      description: `Databases store your entities (like ${terms.characters} or ${terms.locations}). Click the **New Database** button on the dashboard to open the template selector.`,
+      target: '#new-database-btn',
+      placement: 'bottom',
+      actionHint: `👆 Click "New Database"`,
+      checkTask: () => !!document.querySelector('.modal')
     },
     {
       icon: '🗃️',
       title: 'Task: Create a Database',
-      description: `Databases store your entities (like ${terms.characters} or ${terms.locations}). Click the **New Database** button on the dashboard to create your first database!`,
-      target: '#new-database-btn',
+      description: `Choose a template (like **${terms.characters}** or **${terms.locations}**) or choose **Custom**, name your database, and click **Create Database** (or **Save Changes**).`,
+      target: '.modal',
       placement: 'bottom',
-      requireClickOnTarget: true,
-      actionHint: `👆 Click "New Database" to continue`,
-      onTargetClick: () => {
+      padding: 8,
+      actionHint: `👆 Select a template and click create`,
+      checkTask: () => window.location.hash.includes('schema/'),
+      onTaskComplete: () => {
         saveTutorialState({ active: true, currentPhase: 2, styleId });
-        tutorial.stop(true);
       }
     }
   ]);
@@ -628,12 +646,22 @@ export async function runPhase2() {
       },
       {
         icon: '🔧',
-        title: 'Task: Add a Custom Field',
-        description: `Every entry in this database shares custom fields you define. Click **Fields** to open the field manager. Add a new field of type **Text** or **Select**, and click **Save Changes**.`,
+        title: 'Task: Open Fields Manager',
+        description: `Every entry in this database shares custom fields you define. Click **Fields** at the top to open the field manager.`,
         target: '#sv-fields-btn',
         placement: 'bottom',
         padding: 6,
-        actionHint: '⚙️ Click "Fields", add a field, and click "Save Changes"',
+        actionHint: '⚙️ Click "Fields" to open the field manager',
+        checkTask: () => !!document.querySelector('.modal')
+      },
+      {
+        icon: '🔧',
+        title: 'Task: Add a Custom Field',
+        description: `In the field manager modal, click **+ Add Field** (or customize an existing one), name it, and then click **Save Changes** at the bottom of the modal.`,
+        target: '.modal',
+        placement: 'bottom',
+        padding: 8,
+        actionHint: '⚙️ Add a field and click "Save Changes"',
         onEnter: async () => {
           const path = window.location.hash;
           const match = path.match(/schema\/([a-zA-Z0-9_-]+)/);
@@ -695,7 +723,7 @@ export async function runPhase3() {
         actionHint: '📝 Type a name in the title input at the top',
         checkTask: () => {
           const el = document.getElementById('pv-title');
-          return el && el.value.trim().length > 0 && el.value.trim() !== 'Untitled';
+          return el && el.textContent.trim().length > 0 && el.textContent.trim() !== 'Untitled';
         }
       },
       {
@@ -724,14 +752,14 @@ export async function runPhase3() {
       {
         icon: '↩️',
         title: 'Task: Return to Database',
-        description: `Looking good! Now click the **← Back** button at the top of the editor to return to the database schema.`,
+        description: `Looking good! Now click the **← Back** button at the top of the editor to return. We will automatically take you back to the Dashboard to create a canvas.`,
         target: '#pv-back-btn',
         placement: 'bottom',
         requireClickOnTarget: true,
         actionHint: '👆 Click "← Back" to continue',
         onTargetClick: () => {
           saveTutorialState({ active: true, currentPhase: 4, styleId });
-          tutorial.stop(true);
+          navigate('dashboard');
         }
       }
     ]);
@@ -776,15 +804,24 @@ export async function runPhase4() {
       },
       {
         icon: '➕',
-        title: 'Task: Create a Canvas',
-        description: `Click the **New Canvas** button on the dashboard. Give it a name (e.g. 'Mind Map' or 'Plot Board') and choose an icon.`,
+        title: 'Task: Open New Canvas Modal',
+        description: `Click the **New Canvas** button on the dashboard to open the canvas creation modal.`,
         target: '#new-canvas-btn',
         placement: 'bottom',
-        requireClickOnTarget: true,
-        actionHint: '👆 Click "New Canvas" to continue',
-        onTargetClick: () => {
+        actionHint: '👆 Click "New Canvas"',
+        checkTask: () => !!document.querySelector('.modal')
+      },
+      {
+        icon: '➕',
+        title: 'Task: Create a Canvas',
+        description: `Type a name for your new canvas (e.g. 'Plot Board' or 'Mind Map'), choose an icon, and click **Create Canvas**.`,
+        target: '.modal',
+        placement: 'bottom',
+        padding: 8,
+        actionHint: '👆 Name the canvas and click Create',
+        checkTask: () => window.location.hash.includes('workspace/'),
+        onTaskComplete: () => {
           saveTutorialState({ active: true, currentPhase: 5, styleId });
-          tutorial.stop(true);
         }
       }
     ]);
@@ -855,15 +892,14 @@ export async function runPhase5() {
       },
       {
         icon: '📖',
-        title: `Task: Open the ${terms.roadmap || 'Roadmap'}`,
-        description: `Wonderful! Next, let's explore the **${terms.roadmap || 'Story Roadmap'}** horizontal timeline. Click it in the sidebar.`,
-        target: '[data-route="story-timeline"]',
-        placement: 'right',
-        requireClickOnTarget: true,
-        actionHint: `👆 Click "${terms.roadmap || 'Story Roadmap'}" in the sidebar`,
-        onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 6, styleId });
-          tutorial.stop(true);
+        title: `Next: Open the ${terms.roadmap || 'Roadmap'}`,
+        description: `Wonderful! Next, let's explore the **${terms.roadmap || 'Story Roadmap'}** horizontal timeline. We will automatically navigate you there now!`,
+        target: null,
+        onEnter: () => {
+          setTimeout(() => {
+            saveTutorialState({ active: true, currentPhase: 6, styleId });
+            navigate('story-timeline');
+          }, 2000);
         }
       }
     ]);
@@ -923,15 +959,14 @@ export async function runPhase6() {
       },
       {
         icon: '🕸️',
-        title: `Task: Open the ${terms.fate || 'Fate Web'}`,
-        description: `Awesome! Now click **${terms.fate || 'Web of Fate'}** in the sidebar to view your universe's connections in a force-directed graph.`,
-        target: '[data-route="graph"]',
-        placement: 'right',
-        requireClickOnTarget: true,
-        actionHint: `👆 Click "${terms.fate || 'Web of Fate'}" in the sidebar`,
-        onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 7, styleId });
-          tutorial.stop(true);
+        title: `Next: Open the ${terms.fate || 'Fate Web'}`,
+        description: `Awesome! Now click **${terms.fate || 'Web of Fate'}** in the sidebar to view your universe's connections in a force-directed graph. We will automatically navigate you there now!`,
+        target: null,
+        onEnter: () => {
+          setTimeout(() => {
+            saveTutorialState({ active: true, currentPhase: 7, styleId });
+            navigate('graph');
+          }, 2000);
         }
       }
     ]);
@@ -978,15 +1013,14 @@ export async function runPhase7() {
       },
       {
         icon: '📬',
-        title: 'Task: Open the Inbox',
-        description: `Click **Inbox** in the sidebar to visit your notifications and suggestions center.`,
-        target: '[data-route="inbox"]',
-        placement: 'right',
-        requireClickOnTarget: true,
-        actionHint: '👆 Click "Inbox" in the sidebar',
-        onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 8, styleId });
-          tutorial.stop(true);
+        title: 'Next: Open the Inbox',
+        description: `Excellent! Now let's head to the **Inbox** to check your notifications and AI suggestions. We will automatically navigate you there now!`,
+        target: null,
+        onEnter: () => {
+          setTimeout(() => {
+            saveTutorialState({ active: true, currentPhase: 8, styleId });
+            navigate('inbox');
+          }, 2000);
         }
       }
     ]);
@@ -1012,16 +1046,17 @@ export async function runPhase8() {
       },
       {
         icon: '⚡',
-        title: 'Task: Open Ignis Companion',
-        description: `Click the **⚡ Ignis Companion** button at the bottom of the sidebar to slide open the AI assistant drawer.`,
+        title: 'Next: Open Ignis Companion',
+        description: `We will now automatically open **Ignis Companion**, your AI assistant drawer.`,
         target: '.sidebar-ai-toggle-btn',
         placement: 'right',
-        requireClickOnTarget: true,
-        actionHint: '👆 Click "Ignis Companion" at the bottom of the sidebar',
-        onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 9, styleId });
-          tutorial.stop(true);
-          setTimeout(() => runPhase9(), 700);
+        onEnter: () => {
+          setTimeout(() => {
+            const btn = document.querySelector('.sidebar-ai-toggle-btn');
+            if (btn) btn.click();
+            saveTutorialState({ active: true, currentPhase: 9, styleId });
+            runPhase9();
+          }, 2000);
         }
       }
     ]);
@@ -1063,16 +1098,17 @@ export async function runPhase9() {
       },
       {
         icon: '🎬',
-        title: 'Task: Try Scene Mode',
-        description: `Ignis also has a dedicated co-writing **Scene Mode** for drafting scenes paragraph-by-paragraph. Click **Scene Mode** in the sidebar.`,
+        title: 'Next: Try Scene Mode',
+        description: `Next, let's open **Scene Mode** for co-writing paragraph suggestions. We will automatically open it for you now!`,
         target: '.sidebar-scene-mode-btn',
         placement: 'right',
-        requireClickOnTarget: true,
-        actionHint: '👆 Click "Scene Mode" in the sidebar',
-        onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 10, styleId });
-          tutorial.stop(true);
-          setTimeout(() => runPhase10(), 700);
+        onEnter: () => {
+          setTimeout(() => {
+            const btn = document.querySelector('.sidebar-scene-mode-btn');
+            if (btn) btn.click();
+            saveTutorialState({ active: true, currentPhase: 10, styleId });
+            runPhase10();
+          }, 2000);
         }
       }
     ]);
@@ -1114,14 +1150,15 @@ export async function runPhase10() {
       },
       {
         icon: '🔺',
-        title: 'Task: Open Continuity Engine',
-        description: `Awesome! Now close the Scene Mode drawer by clicking the **✕** in the top-right. Then click **Continuity** in the sidebar to see the passive background scanner.`,
-        target: '[data-route="continuity"]',
-        placement: 'right',
-        requireClickOnTarget: true,
-        actionHint: '👆 Click "Continuity" in the sidebar',
-        onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 11, styleId });
+        title: 'Next: Open Continuity Engine',
+        description: `Now let's head to the **Continuity Engine** background consistency scanner. We will automatically navigate you there now!`,
+        target: null,
+        onEnter: () => {
+          setTimeout(() => {
+            document.getElementById('scene-mode-close-btn')?.click();
+            saveTutorialState({ active: true, currentPhase: 11, styleId });
+            navigate('continuity');
+          }, 2000);
         }
       }
     ]);
@@ -1164,14 +1201,14 @@ export async function runPhase11() {
       },
       {
         icon: '⚙️',
-        title: 'Task: Open Settings',
-        description: `Great job! Now let's wrap up in Settings. Click **Settings** (or the gear icon ⚙️) at the bottom of the sidebar.`,
-        target: '[data-route="settings"]',
-        placement: 'top',
-        requireClickOnTarget: true,
-        actionHint: '👆 Click "Settings" in the sidebar',
-        onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 12, styleId });
+        title: 'Next: Open Settings',
+        description: `Great job! Now let's wrap up in **Settings**. We will automatically navigate you there now!`,
+        target: null,
+        onEnter: () => {
+          setTimeout(() => {
+            saveTutorialState({ active: true, currentPhase: 12, styleId });
+            navigate('settings');
+          }, 2000);
         }
       }
     ]);
