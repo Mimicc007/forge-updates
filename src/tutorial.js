@@ -1011,33 +1011,71 @@ export async function runPhase9() {
   const { styleId, styleConf, terms } = await getStyleInfo();
 
   setTimeout(() => {
-    const nodeToolsText = styleId === 'dnd'
-      ? 'Since you are in **D&D Campaign Planner** mode, you can spawn D&D-specific tools: **D&D Stat Blocks**, **Encounter Builders**, and open the interactive **Dice Tray**!'
+    const helperBtnId = styleId === 'dnd'
+      ? '#canvas-dice-tray-btn'
       : styleId === 'gamedev'
-      ? 'Since you are in **Game Dev Companion** mode, you can spawn GameDev-specific tools: **Behavior flowchart nodes**, **XP Progression calculators**, and open the **XP Solver**!'
-      : 'Since you are in **Story Writer** mode, you can spawn Writer-specific tools: **Character Codices**, and open the **Act Pacing tracker**!';
+      ? '#canvas-math-solver-btn'
+      : '#canvas-pacing-tracker-btn';
+
+    const helperPanelId = styleId === 'dnd'
+      ? '#canvas-dice-panel'
+      : styleId === 'gamedev'
+      ? '#canvas-math-panel'
+      : '#canvas-pacing-panel';
+
+    const helperText = styleId === 'dnd'
+      ? `Click the **Dice Tray** button (${terms.panel || 'Dice Tray'}) in the layout toolbar to open the interactive 3D dice roller companion!`
+      : styleId === 'gamedev'
+      ? `Click the **XP Solver** button (${terms.panel || 'XP Solver'}) in the layout toolbar to open the progression formula helper!`
+      : `Click the **Act Pacing** button (${terms.panel || 'Act Pacing'}) in the layout toolbar to open the act pacing companion!`;
+
+    const helperHint = styleId === 'dnd'
+      ? '👆 Click the "Dice Tray" button'
+      : styleId === 'gamedev'
+      ? '👆 Click the "XP Solver" button'
+      : '👆 Click the "Act Pacing" button';
 
     tutorial.start([
       {
         icon: '🎨',
         title: 'The Infinite Canvas',
-        description: `Welcome to the beat's infinite **Canvas**! Here you can pan, zoom, draw diagram arrows, and arrange ideas. Forge automatically seeded nodes for your beat synopsis and linked entries on this grid.`,
+        description: `Welcome to the beat's infinite **Canvas**! Here you can pan, zoom, draw connection lines, and arrange ideas. Forge automatically seeded nodes for your beat synopsis and linked entries on this grid.`,
         target: '.canvas-viewport',
         placement: 'top',
         padding: 0
       },
       {
+        icon: '📝',
+        title: 'Task: Add a Rich Text Card',
+        description: `Let's add a card. Click the **Rich Text** card spawn button in the center toolbar to spawn a rich text editing node on the canvas.`,
+        target: '.canvas-add-node-btn[data-type="richtext"]',
+        placement: 'bottom',
+        requireClickOnTarget: true,
+        actionHint: '👆 Click the purple "Rich Text" button to spawn a card',
+        checkTask: () => !!document.querySelector('.canvas-node[data-type="richtext"]')
+      },
+      {
+        icon: '✍️',
+        title: 'Edit Your Card',
+        description: `Awesome! A new card has spawned on the canvas. You can click and drag its header to move it, drag its edges to resize, double-click to type text, or click the link icon to draw connections.`,
+        target: () => document.querySelector('.canvas-node[data-type="richtext"]') || '.canvas-node',
+        placement: 'right',
+        padding: 4
+      },
+      {
         icon: '🛠️',
-        title: 'Canvas Tools Showcase',
-        description: `These are your **Canvas Tools**. You can click them to spawn rich text cards, sticky notes, images, or map frames.
-${nodeToolsText}`,
-        target: '.canvas-toolbar-center',
-        placement: 'bottom'
+        title: 'Task: Open Companion Panel',
+        description: helperText,
+        target: helperBtnId,
+        placement: 'bottom',
+        requireClickOnTarget: true,
+        actionHint: helperHint,
+        checkTask: () => !!document.querySelector(helperPanelId)
       },
       {
         icon: '🕸️',
         title: `Next: Open the ${terms.fate || 'Web of Fate'}`,
-        description: `Excellent. Now let's view your universe's connections in a project-wide physics graph. We will automatically navigate you to the **${terms.fate || 'Web of Fate'}** now!`,
+        description: `Wonderful! You've unlocked the canvas's core workflows. Now let's view your universe's connections in a project-wide physics graph. We will automatically navigate you to the **${terms.fate || 'Web of Fate'}** now!`,
         target: null,
         onEnter: () => {
           tutorial.setTimeoutTracked(() => {
