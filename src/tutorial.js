@@ -1017,31 +1017,7 @@ export async function runPhase9() {
   const { styleId, styleConf, terms } = await getStyleInfo();
 
   setTimeout(() => {
-    const helperBtnId = styleId === 'dnd'
-      ? '#canvas-dice-tray-btn'
-      : styleId === 'gamedev'
-      ? '#canvas-math-solver-btn'
-      : '#canvas-pacing-tracker-btn';
-
-    const helperPanelId = styleId === 'dnd'
-      ? '#canvas-dice-panel'
-      : styleId === 'gamedev'
-      ? '#canvas-math-panel'
-      : '#canvas-pacing-panel';
-
-    const helperText = styleId === 'dnd'
-      ? `Click the **Dice Tray** button (${terms.panel || 'Dice Tray'}) in the layout toolbar to open the interactive 3D dice roller companion!`
-      : styleId === 'gamedev'
-      ? `Click the **XP Solver** button (${terms.panel || 'XP Solver'}) in the layout toolbar to open the progression formula helper!`
-      : `Click the **Act Pacing** button (${terms.panel || 'Act Pacing'}) in the layout toolbar to open the act pacing companion!`;
-
-    const helperHint = styleId === 'dnd'
-      ? '👆 Click the "Dice Tray" button'
-      : styleId === 'gamedev'
-      ? '👆 Click the "XP Solver" button'
-      : '👆 Click the "Act Pacing" button';
-
-    tutorial.start([
+    const steps = [
       {
         icon: '🎨',
         title: 'The Infinite Canvas',
@@ -1052,45 +1028,159 @@ export async function runPhase9() {
       },
       {
         icon: '📝',
-        title: 'Task: Add a Rich Text Card',
-        description: `Let's add a card. Click the **Rich Text** card spawn button in the center toolbar to spawn a rich text editing node on the canvas.`,
+        title: 'Rich Text Card',
+        description: `Add formatted text blocks for your notes, descriptions, or lore.`,
         target: '.canvas-add-node-btn[data-type="richtext"]',
-        placement: 'bottom',
-        requireClickOnTarget: true,
-        actionHint: '👆 Click the purple "Rich Text" button to spawn a card',
-        checkTask: () => !!document.querySelector('.canvas-node[data-type="richtext"]')
+        placement: 'bottom'
       },
       {
-        icon: '✍️',
-        title: 'Edit Your Card',
-        description: `Awesome! A new card has spawned on the canvas. You can click and drag its header to move it, drag its edges to resize, double-click to type text, or click the link icon to draw connections.`,
-        target: () => document.querySelector('.canvas-node[data-type="richtext"]') || '.canvas-node',
-        placement: 'right',
-        padding: 4
+        icon: '🖼️',
+        title: 'Image Card',
+        description: `Import visual references, characters, or mood boards to the board.`,
+        target: '.canvas-add-node-btn[data-type="image"]',
+        placement: 'bottom'
       },
       {
-        icon: '🛠️',
-        title: 'Task: Open Companion Panel',
-        description: helperText,
-        target: helperBtnId,
-        placement: 'bottom',
-        requireClickOnTarget: true,
-        actionHint: helperHint,
-        checkTask: () => !!document.querySelector(helperPanelId)
+        icon: '⏳',
+        title: 'Timeline Event',
+        description: `Plot chronologically ordered events and story beats.`,
+        target: '.canvas-add-node-btn[data-type="timeline"]',
+        placement: 'bottom'
       },
       {
-        icon: '🕸️',
-        title: `Next: Open the ${terms.fate || 'Web of Fate'}`,
-        description: `Wonderful! You've unlocked the canvas's core workflows. Now let's view your universe's connections in a project-wide physics graph. We will automatically navigate you to the **${terms.fate || 'Web of Fate'}** now!`,
-        target: null,
-        onEnter: () => {
-          tutorial.setTimeoutTracked(() => {
-            saveTutorialState({ active: true, currentPhase: 10, styleId });
-            navigate('graph');
-          }, 3000);
-        }
+        icon: '🔗',
+        title: 'Relationship Link',
+        description: `Connect two entities with a labeled relationship line.`,
+        target: '.canvas-add-node-btn[data-type="link"]',
+        placement: 'bottom'
+      },
+      {
+        icon: '📌',
+        title: 'Mood Board',
+        description: `Pin multiple images, notes, and visual inspirations together.`,
+        target: '.canvas-add-node-btn[data-type="moodboard"]',
+        placement: 'bottom'
+      },
+      {
+        icon: '💬',
+        title: 'Quote Card',
+        description: `Highlight important dialogue, proverbs, or sayings.`,
+        target: '.canvas-add-node-btn[data-type="quote"]',
+        placement: 'bottom'
+      },
+      {
+        icon: '📄',
+        title: 'Database Page Link',
+        description: `Link and embed an existing database page directly onto the canvas.`,
+        target: '.canvas-add-node-btn[data-type="pagelink"]',
+        placement: 'bottom'
+      },
+      {
+        icon: '🗺️',
+        title: 'Interactive Map',
+        description: `Pin locations, draw regions, and reference geographies.`,
+        target: '.canvas-add-node-btn[data-type="map"]',
+        placement: 'bottom'
       }
-    ], {
+    ];
+
+    // Style-specific interactive tasks
+    if (styleId === 'dnd') {
+      steps.push(
+        {
+          icon: '🛡️',
+          title: 'Task: Add D&D Stat Block',
+          description: `Spawn a **D&D Stat Block** to track monster, NPC, or character statistics on the canvas.`,
+          target: '.canvas-add-node-btn[data-type="statblock"]',
+          placement: 'bottom',
+          requireClickOnTarget: true,
+          actionHint: '👆 Click the "D&D Stat Block" button to spawn it',
+          checkTask: () => !!document.querySelector('.canvas-node[data-type="statblock"]')
+        },
+        {
+          icon: '⚔️',
+          title: 'Task: Add Encounter Builder',
+          description: `Spawn an **Encounter Builder** to design combat encounters, track initiative, and balance difficulty.`,
+          target: '.canvas-add-node-btn[data-type="encounter"]',
+          placement: 'bottom',
+          requireClickOnTarget: true,
+          actionHint: '👆 Click the "Encounter Builder" button to spawn it',
+          checkTask: () => !!document.querySelector('.canvas-node[data-type="encounter"]')
+        },
+        {
+          icon: '🎲',
+          title: 'Task: Open Dice Tray',
+          description: `Click the **Dice Tray** button to open the interactive 3D dice roller companion panel!`,
+          target: '#canvas-dice-tray-btn',
+          placement: 'bottom',
+          requireClickOnTarget: true,
+          actionHint: '👆 Click the "Dice Tray" button to open it',
+          checkTask: () => !!document.getElementById('canvas-dice-panel')
+        }
+      );
+    } else if (styleId === 'gamedev') {
+      steps.push(
+        {
+          icon: '🔄',
+          title: 'Task: Add Behavior Node',
+          description: `Spawn a **Behavior Node** to flowchart state machines, player paths, or quest logic.`,
+          target: '.canvas-add-node-btn[data-type="flowchart"]',
+          placement: 'bottom',
+          requireClickOnTarget: true,
+          actionHint: '👆 Click the "Behavior Node" button to spawn it',
+          checkTask: () => !!document.querySelector('.canvas-node[data-type="flowchart"]')
+        },
+        {
+          icon: '📈',
+          title: 'Task: Add Progression Calc',
+          description: `Spawn a **Progression Calc** to model level-ups, stat growth, or economy scaling.`,
+          target: '.canvas-add-node-btn[data-type="progression"]',
+          placement: 'bottom',
+          requireClickOnTarget: true,
+          actionHint: '👆 Click the "Progression Calc" button to spawn it',
+          checkTask: () => !!document.querySelector('.canvas-node[data-type="progression"]')
+        },
+        {
+          icon: '🧮',
+          title: 'Task: Open XP Solver',
+          description: `Click the **XP Solver** button to open the interactive game design math solver panel!`,
+          target: '#canvas-math-solver-btn',
+          placement: 'bottom',
+          requireClickOnTarget: true,
+          actionHint: '👆 Click the "XP Solver" button to open it',
+          checkTask: () => !!document.getElementById('canvas-math-panel')
+        }
+      );
+    } else {
+      steps.push(
+        {
+          icon: '📈',
+          title: 'Task: Open Act Pacing',
+          description: `Click the **Act Pacing** button to open the scene-by-scene narrative pacing tracker!`,
+          target: '#canvas-pacing-tracker-btn',
+          placement: 'bottom',
+          requireClickOnTarget: true,
+          actionHint: '👆 Click the "Act Pacing" button to open it',
+          checkTask: () => !!document.getElementById('canvas-pacing-panel')
+        }
+      );
+    }
+
+    // Add final navigation step
+    steps.push({
+      icon: '🕸️',
+      title: `Next: Open the ${terms.fate || 'Web of Fate'}`,
+      description: `Wonderful! You've explored the canvas tools. Now let's view your universe's connections in a project-wide physics graph. We will automatically navigate you to the **${terms.fate || 'Web of Fate'}** now!`,
+      target: null,
+      onEnter: () => {
+        tutorial.setTimeoutTracked(() => {
+          saveTutorialState({ active: true, currentPhase: 10, styleId });
+          navigate('graph');
+        }, 3000);
+      }
+    });
+
+    tutorial.start(steps, {
       onFinish: () => {
         saveTutorialState({ active: true, currentPhase: 10, styleId });
         navigate('graph');
