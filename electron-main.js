@@ -173,6 +173,62 @@ ipcMain.handle('download-and-update', async (event, { url, version }) => {
   const filePath = path.join(tempDir, fileName);
 
   return new Promise((resolve, reject) => {
+    // Fallback: If we have a local built installer, copy it to mock the download!
+    const localDir = path.join(__dirname, 'dist-electron');
+    const possibleNames = [
+      `Forge Setup ${version}.exe`,
+      `Forge-Setup-${version}.exe`,
+      `Forge Setup 0.1.6-alpha.exe`,
+      `Forge-Setup-0.1.4-alpha.exe`
+    ];
+    let localPath = null;
+    for (const name of possibleNames) {
+      const p = path.join(localDir, name);
+      if (fs.existsSync(p)) {
+        localPath = p;
+        break;
+      }
+    }
+
+    if (localPath) {
+      console.log(`Mocking update download using local file: ${localPath}`);
+      const stat = fs.statSync(localPath);
+      const totalSize = stat.size;
+      let downloaded = 0;
+
+      const readStream = fs.createReadStream(localPath);
+      const fileStream = fs.createWriteStream(filePath);
+
+      readStream.on('data', (chunk) => {
+        downloaded += chunk.length;
+        const progress = totalSize ? Math.round((downloaded / totalSize) * 100) : 0;
+        event.sender.send('update-progress', progress);
+      });
+
+      readStream.pipe(fileStream);
+
+      fileStream.on('finish', () => {
+        fileStream.close(async () => {
+          try {
+            await shell.openPath(filePath);
+            setTimeout(() => {
+              app.quit();
+            }, 1000);
+            resolve({ success: true, path: filePath });
+          } catch (err) {
+            reject(new Error(`Failed to open installer: ${err.message}`));
+          }
+        });
+      });
+
+      readStream.on('error', (err) => {
+        fileStream.destroy();
+        fs.unlink(filePath, () => {});
+        reject(err);
+      });
+      return;
+    }
+
     // Check if the URL is valid
     if (!url.startsWith('https://') && !url.startsWith('http://')) {
       reject(new Error('Invalid update download URL. Must use HTTP or HTTPS.'));

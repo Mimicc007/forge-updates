@@ -1064,7 +1064,6 @@ function renderBeats() {
         <span class="stc-card-title" title="${esc(beat.title)}">${esc(beat.title)}</span>
         <div style="display:flex;gap:3px;align-items:center;">
           <button class="stc-card-canvas-btn" title="Open beat canvas" tabindex="-1" style="background:transparent;border:none;cursor:pointer;padding:2px 4px;border-radius:4px;font-size:12px;line-height:1;opacity:0.6;transition:opacity 0.15s,background 0.15s;" onmouseenter="this.style.opacity='1';this.style.background='rgba(255,255,255,0.08)'" onmouseleave="this.style.opacity='0.6';this.style.background='transparent'">🎨</button>
-          <button class="stc-card-edit-btn" title="Edit beat" tabindex="-1">✏️</button>
         </div>
       </div>
       <div class="stc-card-body">${esc(beat.content || 'No synopsis.')}</div>
@@ -1074,11 +1073,6 @@ function renderBeats() {
     card.querySelector('.stc-card-canvas-btn').addEventListener('click', e => {
       e.stopPropagation();
       openBeatCanvas(beat);
-    });
-
-    card.querySelector('.stc-card-edit-btn').addEventListener('click', e => {
-      e.stopPropagation();
-      openEditModal(beat);
     });
 
     // Avatar chip clicks → navigate to that page
@@ -1431,7 +1425,7 @@ function openEditModal(beat) {
         <div class="stc-checklist" id="stc-prereqs">${prereqsHTML}</div>
       </div>
       <div class="stc-modal-field">
-        <label class="stc-modal-label">Linked Characters / Entities</label>
+        <label class="stc-modal-label">Linked Entries</label>
         <div class="stc-checklist" id="stc-chars">${charsHTML}</div>
       </div>
     </div>

@@ -3,11 +3,12 @@
    Shows all pages belonging to a schema, plus schema field management.
    ============================================================ */
 
-import { getSchema, saveSchema, deleteSchema, getPagesBySchema, savePage, deletePage, generateId } from '../db.js';
+import { getSchema, saveSchema, deleteSchema, getPagesBySchema, savePage, deletePage, generateId, getActiveProject, saveProject } from '../db.js';
 import { refreshIcons } from '../main.js';
 import { navigate } from '../router.js';
 import { showModal, showToast, showConfirm, escapeHtml, timeAgo } from '../ui.js';
 import { refreshSidebarLists } from '../sidebar.js';
+import { getStyleConfig } from '../styleConfig.js';
 
 export async function renderSchemaView(container, params) {
   const schemaId = params.id;
@@ -178,8 +179,10 @@ async function renderSchemaPage(container, schema) {
   });
 
   // Fields manager
-  container.querySelector('#sv-fields-btn')?.addEventListener('click', () => {
-    showFieldsModal(schema, async (updatedSchema) => {
+  container.querySelector('#sv-fields-btn')?.addEventListener('click', async () => {
+    const project = await getActiveProject();
+    const styleId = project?.settings?.style || 'story';
+    showFieldsModal(schema, styleId, async (updatedSchema) => {
       await saveSchema(updatedSchema);
       showToast('Fields saved', 'success');
       await renderSchemaPage(container, updatedSchema);
@@ -190,6 +193,16 @@ async function renderSchemaPage(container, schema) {
   container.querySelector('#sv-delete-db-btn')?.addEventListener('click', async () => {
     const confirmed = await showConfirm('Delete Database', `Delete "${schema.name}" and all its entries? This cannot be undone.`);
     if (!confirmed) return;
+    // Track deleted default schemas so they don't get auto-seeded on reload
+    const project = await getActiveProject();
+    if (project) {
+      if (!project.settings) project.settings = {};
+      if (!project.settings.deletedSchemas) project.settings.deletedSchemas = [];
+      if (!project.settings.deletedSchemas.includes(schema.id)) {
+        project.settings.deletedSchemas.push(schema.id);
+        await saveProject(project);
+      }
+    }
     // Delete all pages first
     for (const p of pages) await deletePage(p.id);
     await deleteSchema(schema.id);
@@ -201,8 +214,44 @@ async function renderSchemaPage(container, schema) {
 
 // ── Field Manager Modal ───────────────────────────────────────────────────────
 
-function showFieldsModal(schema, onSave) {
+function showFieldsModal(schema, styleId, onSave) {
   const fields = JSON.parse(JSON.stringify(schema.fields || [])); // deep copy
+  const styleConf = getStyleConfig(styleId);
+
+  // Get style-specific templates/schemas to gather premade fields
+  const presetSchemas = styleConf.getSchemas(schema.projectId) || [];
+  const premadeFieldsMap = new Map();
+
+  presetSchemas.forEach(ps => {
+    if (ps.fields) {
+      ps.fields.forEach(f => {
+        if (!premadeFieldsMap.has(f.name.toLowerCase())) {
+          premadeFieldsMap.set(f.name.toLowerCase(), {
+            name: f.name,
+            type: f.type,
+            options: f.options || []
+          });
+        }
+      });
+    }
+  });
+
+  // Generic common fields as fallbacks
+  const commonFields = [
+    { name: 'Summary', type: 'text' },
+    { name: 'Priority', type: 'select', options: ['High', 'Medium', 'Low'] },
+    { name: 'URL/Link', type: 'url' },
+    { name: 'Date Created', type: 'date' },
+    { name: 'Notes', type: 'text' }
+  ];
+
+  commonFields.forEach(cf => {
+    if (!premadeFieldsMap.has(cf.name.toLowerCase())) {
+      premadeFieldsMap.set(cf.name.toLowerCase(), cf);
+    }
+  });
+
+  const premadeFields = Array.from(premadeFieldsMap.values());
 
   const content = document.createElement('div');
 
@@ -222,9 +271,19 @@ function showFieldsModal(schema, onSave) {
           </div>
         `).join('')}
       </div>
-      <button id="add-field-btn" class="btn btn-secondary btn-sm" style="width: 100%;">
-        <i data-lucide="plus" style="width:14px;height:14px;margin-right:6px;pointer-events:none;"></i> Add Field
-      </button>
+
+      <div style="display: flex; flex-direction: column; gap: var(--sp-1.5); border-top: 1px solid var(--border-subtle); padding-top: var(--sp-4); margin-top: var(--sp-2);">
+        <label style="font-size: var(--fs-xs); color: var(--text-muted); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.05em;">Choose Field Type / Premade Field</label>
+        <div style="display: flex; gap: var(--sp-2);">
+          <select id="premade-fields-select" class="form-input" style="flex: 1; font-size: var(--fs-sm); height: 36px;">
+            <option value="custom">[ Custom Field... ]</option>
+            ${premadeFields.map(pf => `<option value="${escapeHtml(pf.name)}">${escapeHtml(pf.name)} (${pf.type})</option>`).join('')}
+          </select>
+          <button id="add-field-btn" class="btn btn-secondary btn-sm" style="flex-shrink: 0; height: 36px;">
+            <i data-lucide="plus" style="width:14px;height:14px;margin-right:6px;pointer-events:none;"></i> Add Field
+          </button>
+        </div>
+      </div>
     `;
 
     refreshIcons();
@@ -245,7 +304,20 @@ function showFieldsModal(schema, onSave) {
     });
 
     content.querySelector('#add-field-btn')?.addEventListener('click', () => {
-      fields.push({ id: generateId(), name: 'New Field', type: 'text' });
+      const selectVal = content.querySelector('#premade-fields-select').value;
+      if (selectVal === 'custom') {
+        fields.push({ id: generateId(), name: 'New Field', type: 'text' });
+      } else {
+        const pf = premadeFields.find(p => p.name === selectVal);
+        if (pf) {
+          fields.push({
+            id: generateId(),
+            name: pf.name,
+            type: pf.type,
+            options: pf.options ? [...pf.options] : []
+          });
+        }
+      }
       renderFields();
     });
   };

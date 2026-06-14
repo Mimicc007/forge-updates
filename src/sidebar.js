@@ -318,7 +318,11 @@ export async function refreshSidebarLists() {
   // Auto-seed default schemas if missing (e.g. for existing projects getting the Maps feature)
   if (styleConf && styleConf.getSchemas) {
     const defaultSchemas = styleConf.getSchemas(project.id);
+    const deletedSchemas = project.settings?.deletedSchemas || [];
     for (const defSchema of defaultSchemas) {
+      if (deletedSchemas.includes(defSchema.id)) {
+        continue;
+      }
       if (!schemas.some(s => s.id === defSchema.id)) {
         await db.saveSchema(defSchema);
         schemas.push(defSchema);

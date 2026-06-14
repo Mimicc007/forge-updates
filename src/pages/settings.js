@@ -134,6 +134,13 @@ async function renderTabContent(panel, project) {
           showToast('Project style updated! Seeding new databases...', 'info');
           const styleConf = getStyleConfig(style);
           
+          if (!project.settings) project.settings = {};
+          if (project.settings.deletedSchemas) {
+            const newStyleSchemaIds = styleConf.getSchemas(project.id).map(s => s.id);
+            project.settings.deletedSchemas = project.settings.deletedSchemas.filter(id => !newStyleSchemaIds.includes(id));
+            await db.saveProject(project);
+          }
+
           // Seed missing schemas for the new style
           const schemas = styleConf.getSchemas(project.id);
           const existingSchemas = await db.getSchemas(project.id);
