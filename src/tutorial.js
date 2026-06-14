@@ -4,6 +4,10 @@
    covers EVERY feature in Forge, phase by phase.
    ============================================================ */
 
+import * as db from './db.js';
+import { getStyleConfig } from './styleConfig.js';
+import { navigate } from './router.js';
+
 const TUTORIAL_STATE_KEY = 'forge_tutorial_state';
 
 function getTutorialState() {
@@ -23,6 +27,8 @@ class SpotlightTutorial {
     this.currentStepIndex = 0;
     this.isActive = false;
     this.onFinish = null;
+    this.taskPollInterval = null;
+    this.taskCompleted = false;
     this.initDOM();
   }
 
@@ -152,14 +158,15 @@ class SpotlightTutorial {
         }
         #forge-tut-action-hint {
           font-size: 0.72rem;
-          color: rgba(229,169,59,0.75);
+          color: rgba(229, 169, 59, 0.75);
           font-family: var(--font-hud, monospace);
           text-align: center;
           padding: 6px 10px;
-          background: rgba(229,169,59,0.06);
+          background: rgba(229, 169, 59, 0.06);
           border-radius: 6px;
-          border: 1px solid rgba(229,169,59,0.15);
+          border: 1px solid rgba(229, 169, 59, 0.15);
           animation: forge-tut-pulse 2s ease-in-out infinite;
+          transition: all 0.2s ease;
         }
         @keyframes forge-tut-pulse {
           0%, 100% { opacity: 1; }
@@ -293,6 +300,14 @@ class SpotlightTutorial {
     }
   }
 
+  clearTaskPolling() {
+    if (this.taskPollInterval) {
+      clearInterval(this.taskPollInterval);
+      this.taskPollInterval = null;
+    }
+    this.taskCompleted = false;
+  }
+
   start(steps, config = {}) {
     this.steps = steps;
     this.currentStepIndex = 0;
@@ -307,6 +322,7 @@ class SpotlightTutorial {
   }
 
   stop(preserveState = false) {
+    this.clearTaskPolling();
     this.isActive = false;
     this.overlay.style.opacity = '0';
     this.overlay.style.pointerEvents = 'none';
@@ -317,6 +333,7 @@ class SpotlightTutorial {
   }
 
   next() {
+    this.clearTaskPolling();
     if (this.currentStepIndex < this.steps.length - 1) {
       this.currentStepIndex++;
       this.renderStep();
@@ -327,6 +344,7 @@ class SpotlightTutorial {
   }
 
   prev() {
+    this.clearTaskPolling();
     if (this.currentStepIndex > 0) {
       this.currentStepIndex--;
       this.renderStep();
@@ -334,8 +352,19 @@ class SpotlightTutorial {
   }
 
   renderStep() {
+    this.clearTaskPolling();
+
     const step = this.steps[this.currentStepIndex];
     if (!step) return;
+
+    // Reset styles and states
+    this.actionHint.style.background = '';
+    this.actionHint.style.borderColor = '';
+    this.actionHint.style.color = '';
+    this.nextBtn.disabled = false;
+    this.nextBtn.style.opacity = '';
+    this.nextBtn.style.pointerEvents = '';
+    this.nextBtn.style.display = 'block';
 
     // Update content
     this.popoverIcon.textContent = step.icon || '⚡';
@@ -360,16 +389,65 @@ class SpotlightTutorial {
     // Prev button visibility
     this.prevBtn.style.display = this.currentStepIndex > 0 ? 'block' : 'none';
 
-    // Handle requireClickOnTarget steps
-    if (step.requireClickOnTarget) {
+    // Handle checkTask steps vs click target vs normal
+    if (step.checkTask) {
+      this.nextBtn.disabled = true;
+      this.nextBtn.style.opacity = '0.5';
+      this.nextBtn.style.pointerEvents = 'none';
+      this.nextBtn.textContent = 'Complete Task';
+
+      this.overlay.style.pointerEvents = 'none'; // let user click through
+      this.actionHint.innerHTML = step.actionHint || '📝 Task: Perform action to continue';
+      this.actionHint.style.display = 'block';
+
+      if (step.onEnter) step.onEnter();
+
+      this.taskPollInterval = setInterval(async () => {
+        try {
+          const isDone = await step.checkTask();
+          if (isDone && !this.taskCompleted) {
+            this.taskCompleted = true;
+            clearInterval(this.taskPollInterval);
+            this.taskPollInterval = null;
+
+            // Success feedback
+            this.actionHint.innerHTML = `🎉 <strong>Task Complete!</strong>`;
+            this.actionHint.style.background = 'rgba(16, 185, 129, 0.1)';
+            this.actionHint.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            this.actionHint.style.color = '#10b981';
+
+            // Enable next
+            this.nextBtn.disabled = false;
+            this.nextBtn.style.opacity = '';
+            this.nextBtn.style.pointerEvents = '';
+            this.nextBtn.textContent = this.currentStepIndex === this.steps.length - 1 ? '🎉 Finish' : 'Next →';
+
+            if (step.onTaskComplete) step.onTaskComplete();
+
+            if (step.autoAdvance !== false) {
+              setTimeout(() => {
+                if (this.isActive && this.taskCompleted) {
+                  this.next();
+                }
+              }, 1200);
+            }
+          }
+        } catch (e) {
+          console.error('Task check error:', e);
+        }
+      }, 300);
+
+    } else if (step.requireClickOnTarget) {
       this.nextBtn.style.display = 'none';
       this.overlay.style.pointerEvents = 'none'; // let clicks fall through
       this.actionHint.textContent = step.actionHint || '👆 Click the highlighted element to continue';
       this.actionHint.style.display = 'block';
+      if (step.onEnter) step.onEnter();
     } else {
       this.nextBtn.style.display = 'block';
       this.overlay.style.pointerEvents = 'auto';
       this.actionHint.style.display = 'none';
+      if (step.onEnter) step.onEnter();
     }
 
     // Position spotlight
@@ -395,8 +473,6 @@ class SpotlightTutorial {
     } else {
       this._centerPopover();
     }
-
-    if (step.onEnter) step.onEnter();
   }
 
   _centerPopover() {
@@ -446,64 +522,87 @@ class SpotlightTutorial {
 const tutorial = new SpotlightTutorial();
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
-export function startTutorial() {
-  saveTutorialState({ active: true, currentPhase: 1 });
+export async function startTutorial() {
+  const project = await db.getActiveProject();
+  const styleId = project?.settings?.style || 'story';
+  tutorial.styleId = styleId;
+  saveTutorialState({ active: true, currentPhase: 1, styleId });
   window.location.hash = '#/dashboard';
   setTimeout(() => runPhase1(), 600);
+}
+
+// Helper to get active style config and terms
+async function getStyleInfo() {
+  const state = getTutorialState();
+  const styleId = state.styleId || tutorial.styleId || 'story';
+  tutorial.styleId = styleId;
+  const styleConf = getStyleConfig(styleId);
+  return { styleId, styleConf, terms: styleConf.terms };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 1 — Dashboard & Navigation Overview
 // ═══════════════════════════════════════════════════════════════════════════════
-export function runPhase1() {
+export async function runPhase1() {
   const state = getTutorialState();
   if (!state.active || state.currentPhase !== 1) return;
+
+  const { styleId, styleConf, terms } = await getStyleInfo();
 
   tutorial.start([
     {
       icon: '⚡',
       title: 'Welcome to Forge',
-      description: `Forge is your all-in-one creative universe builder — databases, visual canvases, story planning, and AI writing tools all in one place. This tour covers <strong>every feature</strong>. Let's dive in!`,
+      description: `Forge is your creative workspace — databases, visual canvases, timelines, and AI writing tools all in one place. This interactive guide will teach you how to use every feature by having you **actively try** the core features! Let's dive in.`,
       target: null
     },
     {
       icon: '🏠',
-      title: 'The Dashboard',
-      description: `This is your <strong>Dashboard</strong> — your mission control. It shows stats about your universe: total entries, recent edits, and quick-access cards to your most-used databases and canvases.`,
-      target: '#dashboard-content',
+      title: `The ${terms.dashboardTitle || 'Dashboard'}`,
+      description: `This is your **${terms.dashboardTitle || 'Dashboard'}** — your mission control. It shows stats about your project, recent changes, and quick links to open your databases and canvases.`,
+      target: '#page-container',
       placement: 'right',
       padding: 4
     },
     {
       icon: '🗂️',
-      title: 'The Sidebar',
-      description: `The <strong>Sidebar</strong> is your primary navigation. It shows <em>Overview</em> links at the top, your <em>Databases</em> and <em>Canvases</em> in the middle, and <em>tools</em> (Ignis, Scene Mode, Settings) at the bottom.`,
+      title: `The ${terms.sidebarTitle || 'Sidebar'}`,
+      description: `The **${terms.sidebarTitle || 'Sidebar'}** is your primary navigation. It lists your overview links at the top, your databases and canvases in the middle, and companion tools (Ignis, Scene Mode, Settings) at the bottom.`,
       target: '#sidebar',
       placement: 'right'
     },
     {
       icon: '↔️',
-      title: 'Collapsing the Sidebar',
-      description: `Click the <strong>collapse button</strong> (top-right of sidebar) to hide it and give your content more space. Click the Forge logo to expand it again. Your preference is saved automatically.`,
+      title: 'Task: Collapse the Sidebar',
+      description: `Try collapsing the sidebar to give your content more space. Click the **collapse button** (top-right of sidebar) to close it, then click the logo to expand it again.`,
       target: '.sidebar-collapse-btn',
-      placement: 'right'
+      placement: 'right',
+      actionHint: '👈 Click the sidebar collapse button',
+      checkTask: () => document.getElementById('sidebar')?.classList.contains('collapsed'),
+      onTaskComplete: () => {
+        setTimeout(() => {
+          document.getElementById('sidebar')?.classList.remove('collapsed');
+        }, 800);
+      }
     },
     {
       icon: '🔍',
-      title: 'Global Search',
-      description: `Press <code>Ctrl + K</code> (or <code>Cmd + K</code> on Mac) at any time to open the <strong>Global Search</strong>. Instantly find any character, location, item, or lore entry across your entire universe.`,
-      target: null
+      title: 'Task: Try Global Search',
+      description: `Let's find things quickly. Press **Ctrl + K** (or **Cmd + K** on Mac) to open the **Global Search** overlay, which lets you search across all entities instantly.`,
+      target: null,
+      actionHint: '⌨️ Press Ctrl + K (or Cmd + K) to open search',
+      checkTask: () => !!document.querySelector('.search-overlay') || !!document.querySelector('.search-container')
     },
     {
       icon: '🗃️',
-      title: 'Create a Database',
-      description: `Databases store your world's entities — characters, locations, factions, items, and more. Each database has a <strong>Schema</strong> (custom fields) and contains individual <strong>Pages</strong> (entries). Click <strong>New Database</strong> to create your first one!`,
+      title: 'Task: Create a Database',
+      description: `Databases store your entities (like ${terms.characters} or ${terms.locations}). Click the **New Database** button on the dashboard to create your first database!`,
       target: '#new-database-btn',
       placement: 'bottom',
       requireClickOnTarget: true,
-      actionHint: '👆 Click "New Database" to continue',
+      actionHint: `👆 Click "New Database" to continue`,
       onTargetClick: () => {
-        saveTutorialState({ active: true, currentPhase: 2 });
+        saveTutorialState({ active: true, currentPhase: 2, styleId });
         tutorial.stop(true);
       }
     }
@@ -513,44 +612,56 @@ export function runPhase1() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 2 — Schema View (Database editor)
 // ═══════════════════════════════════════════════════════════════════════════════
-export function runPhase2() {
+export async function runPhase2() {
   const state = getTutorialState();
   if (!state.active || state.currentPhase !== 2) return;
+
+  const { styleId, styleConf, terms } = await getStyleInfo();
 
   setTimeout(() => {
     tutorial.start([
       {
         icon: '📋',
-        title: 'Your New Database',
-        description: `This is the <strong>Schema View</strong> — the home screen for a database. It lists all entries (pages) and lets you manage the database's structure and settings.`,
+        title: 'Your Database Schema',
+        description: `This is the **Schema View** — the home screen for a database. It lists all entries (pages) and lets you customize the fields and settings of this database template.`,
         target: null
       },
       {
-        icon: '🏷️',
-        title: 'Database Name & Icon',
-        description: `At the top you'll see your database's <strong>name</strong> and <strong>icon</strong>. Click either to rename or change the icon — choose from hundreds of Lucide icons to identify your database at a glance in the sidebar.`,
-        target: '#sv-name-block',
-        placement: 'bottom',
-        padding: 6
-      },
-      {
         icon: '🔧',
-        title: 'Schema Fields',
-        description: `The <strong>Schema</strong> defines the custom fields every entry in this database will have. Click <strong>"+ Add Field"</strong> to add typed fields like text, number, dropdown, date, or image. These appear as structured properties on each entry.`,
-        target: '#sv-schema-section',
-        placement: 'top',
-        padding: 6
+        title: 'Task: Add a Custom Field',
+        description: `Every entry in this database shares custom fields you define. Click **Fields** to open the field manager. Add a new field of type **Text** or **Select**, and click **Save Changes**.`,
+        target: '#sv-fields-btn',
+        placement: 'bottom',
+        padding: 6,
+        actionHint: '⚙️ Click "Fields", add a field, and click "Save Changes"',
+        onEnter: async () => {
+          const path = window.location.hash;
+          const match = path.match(/schema\/([a-zA-Z0-9_-]+)/);
+          if (match) {
+            const schema = await db.getSchema(match[1]);
+            tutorial.initialFieldsCount = schema ? (schema.fields || []).length : 0;
+          } else {
+            tutorial.initialFieldsCount = 0;
+          }
+        },
+        checkTask: async () => {
+          const path = window.location.hash;
+          const match = path.match(/schema\/([a-zA-Z0-9_-]+)/);
+          if (!match) return false;
+          const schema = await db.getSchema(match[1]);
+          return schema && schema.fields && schema.fields.length > tutorial.initialFieldsCount;
+        }
       },
       {
         icon: '📄',
-        title: 'Create an Entry',
-        description: `Click <strong>"+ New Entry"</strong> to create your first page in this database. Each entry becomes a rich-text document with your custom field properties.`,
+        title: 'Task: Create a New Entry',
+        description: `Excellent! Now click **+ New Entry** (or the empty state button) to create your first page in this database.`,
         target: '#sv-new-btn',
         placement: 'left',
         requireClickOnTarget: true,
         actionHint: '👆 Click "+ New Entry" to continue',
         onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 3 });
+          saveTutorialState({ active: true, currentPhase: 3, styleId });
           tutorial.stop(true);
         }
       }
@@ -561,73 +672,65 @@ export function runPhase2() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 3 — Page / Entry Editor
 // ═══════════════════════════════════════════════════════════════════════════════
-export function runPhase3() {
+export async function runPhase3() {
   const state = getTutorialState();
   if (!state.active || state.currentPhase !== 3) return;
+
+  const { styleId, styleConf, terms } = await getStyleInfo();
 
   setTimeout(() => {
     tutorial.start([
       {
         icon: '✍️',
         title: 'The Page Editor',
-        description: `Every entry in Forge is a <strong>Page</strong>. This is the full-featured editor where you document everything about a character, location, item, or any other entity in your world.`,
+        description: `This is the full-featured page editor. Here, you write backstories, statistics, or specs. Everything you edit is saved automatically.`,
         target: null
       },
       {
         icon: '🔤',
-        title: 'Page Title',
-        description: `Click the <strong>title area</strong> at the top to name your entry (e.g. "Kira Voss", "The Sunken Citadel"). The title is auto-saved instantly — no save button needed.`,
+        title: 'Task: Name your Page',
+        description: `Click the title input at the top (which currently says "Untitled") and type a name for this page (e.g. 'Arthur Voss', 'Vortex Reactor', or 'Zone 1').`,
         target: '#pv-title',
-        placement: 'bottom'
-      },
-      {
-        icon: '🖼️',
-        title: 'Cover Image',
-        description: `Click <strong>"Add Cover"</strong> to upload a cover image for this entry. Images are stored locally in your project. Hover over the cover to reposition or remove it.`,
-        target: '#pv-cover-area',
         placement: 'bottom',
-        padding: 4
+        actionHint: '📝 Type a name in the title input at the top',
+        checkTask: () => {
+          const el = document.getElementById('pv-title');
+          return el && el.value.trim().length > 0 && el.value.trim() !== 'Untitled';
+        }
       },
       {
         icon: '🏷️',
-        title: 'Tags (Visual Tagging)',
-        description: `The <strong>Tags</strong> field uses Forge's Visual Tagging System. Type a tag and press <code>Enter</code> or <code>,</code> to create an interactive chip. Click any chip to remove it. Tags help you filter and group related entries across your universe.`,
-        target: '#pv-tags-input',
+        title: 'Task: Create a Tag',
+        description: `Type a tag name (like 'core' or 'magical') in the tag box and press **Enter** (or comma) to create a visual tag chip.`,
+        target: '.pv-tag-input',
         placement: 'bottom',
-        padding: 4
-      },
-      {
-        icon: '📝',
-        title: 'Custom Properties',
-        description: `The <strong>Properties panel</strong> shows all the schema fields you defined for this database. Fill in the character's age, faction, status, or any other typed property. These fields are searchable and displayable on the Schema View list.`,
-        target: '#pv-properties',
-        placement: 'bottom',
-        padding: 6
+        padding: 4,
+        actionHint: '🏷️ Type a tag and press Enter',
+        checkTask: () => document.querySelectorAll('.pv-tag-chip').length > 0
       },
       {
         icon: '📖',
-        title: 'Rich Text Editor',
-        description: `The main body uses a full <strong>Rich Text Editor</strong> (Quill). You can: format text with bold/italic/headings, create bullet lists, embed images inline, add horizontal dividers, and write detailed lore, backstory, or notes here.`,
+        title: 'Task: Write some Lore/Text',
+        description: `Click inside the rich-text editor below and type at least a short sentence (10 characters or more) about this entity.`,
         target: '#pv-editor-mount',
         placement: 'top',
-        padding: 4
-      },
-      {
-        icon: '🔗',
-        title: 'Sidebar Entries — Drag to Canvas',
-        description: `Here's a power move: expand any database in the sidebar and <strong>drag an entry card directly onto a Canvas tab</strong>. It instantly creates a visual page-link node on that canvas — great for mapping relationships visually!`,
-        target: null
+        padding: 4,
+        actionHint: '✍️ Type a description in the Quill editor (min. 10 chars)',
+        checkTask: () => {
+          const el = document.querySelector('.ql-editor');
+          return el && el.textContent.trim().length >= 10;
+        }
       },
       {
         icon: '↩️',
-        title: 'Back to the Database',
-        description: `When done editing, click the <strong>← Back</strong> button to return to the database list. Your work is already saved. Next we'll explore the visual Canvas workspace!`,
+        title: 'Task: Return to Database',
+        description: `Looking good! Now click the **← Back** button at the top of the editor to return to the database schema.`,
         target: '#pv-back-btn',
         placement: 'bottom',
         requireClickOnTarget: true,
         actionHint: '👆 Click "← Back" to continue',
         onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 4 });
+          saveTutorialState({ active: true, currentPhase: 4, styleId });
           tutorial.stop(true);
         }
       }
@@ -638,24 +741,24 @@ export function runPhase3() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 4 — Dashboard → create Canvas → Workspace
 // ═══════════════════════════════════════════════════════════════════════════════
-export function runPhase4() {
+export async function runPhase4() {
   const state = getTutorialState();
   if (!state.active || state.currentPhase !== 4) return;
 
+  const { styleId, styleConf, terms } = await getStyleInfo();
+
   setTimeout(() => {
-    // If we're on schema view, guide user back to dashboard first
     const onDashboard = window.location.hash.includes('dashboard') || !window.location.hash.includes('schema');
     if (!onDashboard) {
-      // Prompt user to navigate to dashboard
       tutorial.start([
         {
           icon: '🏠',
-          title: 'Head Back to Dashboard',
-          description: 'Click on <strong>Dashboard</strong> in the sidebar to continue the tour — we\'re going to create a visual Canvas!',
+          title: `Go to ${terms.dashboardTitle || 'Dashboard'}`,
+          description: `Click on **${terms.dashboardTitle || 'Dashboard'}** in the sidebar to return to the main dashboard.`,
           target: '[data-route="dashboard"]',
           placement: 'right',
           requireClickOnTarget: true,
-          actionHint: '👆 Click "Dashboard" in the sidebar',
+          actionHint: `👆 Click "${terms.dashboardTitle || 'Dashboard'}" in the sidebar`,
           onTargetClick: () => {
             tutorial.stop(true);
           }
@@ -668,19 +771,19 @@ export function runPhase4() {
       {
         icon: '🎨',
         title: 'Visual Canvases',
-        description: `<strong>Canvases</strong> are infinite visual workspaces where you can freely arrange idea cards, link entries, and map out your universe spatially. They're perfect for relationship maps, plot planning, world layouts, and brainstorming.`,
+        description: `Canvases are infinite visual workspaces where you can arrange idea cards, images, relationship maps, and database page links. Let's create one.`,
         target: null
       },
       {
         icon: '➕',
-        title: 'Create a Canvas',
-        description: `Click <strong>"New Canvas"</strong> to create your first visual workspace. Give it a name like "Character Web" or "Act 1 Map". It will appear in your sidebar under <em>Canvases</em>.`,
+        title: 'Task: Create a Canvas',
+        description: `Click the **New Canvas** button on the dashboard. Give it a name (e.g. 'Mind Map' or 'Plot Board') and choose an icon.`,
         target: '#new-canvas-btn',
         placement: 'bottom',
         requireClickOnTarget: true,
         actionHint: '👆 Click "New Canvas" to continue',
         onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 5 });
+          saveTutorialState({ active: true, currentPhase: 5, styleId });
           tutorial.stop(true);
         }
       }
@@ -691,70 +794,75 @@ export function runPhase4() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 5 — Workspace (Infinite Canvas)
 // ═══════════════════════════════════════════════════════════════════════════════
-export function runPhase5() {
+export async function runPhase5() {
   const state = getTutorialState();
   if (!state.active || state.currentPhase !== 5) return;
+
+  const { styleId, styleConf, terms } = await getStyleInfo();
 
   setTimeout(() => {
     tutorial.start([
       {
         icon: '🗺️',
-        title: 'The Infinite Canvas',
-        description: `This is your <strong>Workspace</strong> — an infinite, pannable, zoomable canvas. All your visual thinking happens here. You can place nodes anywhere, connect them, and arrange them freely.`,
-        target: '.canvas-viewport',
-        placement: 'top',
-        padding: 0
-      },
-      {
-        icon: '🖱️',
-        title: 'Navigating the Canvas',
-        description: `<strong>Pan</strong>: Click and drag on empty space (or middle-click drag).<br><strong>Zoom</strong>: Scroll wheel to zoom in/out.<br><strong>Reset View</strong>: Press <code>Home</code> key or use the reset button in the toolbar to fit all nodes in view.`,
+        title: 'The Infinite Workspace',
+        description: `Welcome to the infinite workspace grid! You can zoom with the mouse wheel, pan by dragging the empty space, and build layouts. Let's practice.`,
         target: '.canvas-viewport',
         placement: 'top',
         padding: 0
       },
       {
         icon: '✏️',
-        title: 'Creating Nodes',
-        description: `<strong>Right-click</strong> anywhere on the grid to open the context menu. Choose from: <em>Text Node</em>, <em>Sticky Note</em>, <em>Image Node</em>, or <em>Section Divider</em>. Each node can be freely dragged and resized.`,
+        title: 'Task: Add a Node',
+        description: `**Right-click** anywhere on the grid to open the context menu. Select **Text Node** or **Sticky Note** to place a card.`,
         target: '.canvas-viewport',
         placement: 'top',
-        padding: 0
+        padding: 0,
+        actionHint: '🖱️ Right-click empty space and choose a node type',
+        onEnter: () => {
+          tutorial.initialNodeCount = document.querySelectorAll('.canvas-node').length;
+        },
+        checkTask: () => document.querySelectorAll('.canvas-node').length > tutorial.initialNodeCount
+      },
+      {
+        icon: '📝',
+        title: 'Task: Edit the Node Title',
+        description: `Double-click the title of your new node (where it says "Untitled") and type a name for it.`,
+        target: '.canvas-node-title',
+        placement: 'bottom',
+        actionHint: "✏️ Double-click the 'Untitled' text and type a new name",
+        checkTask: () => {
+          const el = document.querySelector('.canvas-node-title');
+          return el && el.textContent.trim().length > 0 && el.textContent.trim() !== 'Untitled';
+        }
       },
       {
         icon: '🔗',
-        title: 'Page-Link Nodes',
-        description: `The most powerful node type is the <strong>Page-Link</strong>. Drag any entry from the sidebar onto the canvas to create a card that links to a full database entry. Hover the card to see a preview of that entry's lore and properties!`,
-        target: '.canvas-viewport',
-        placement: 'top',
-        padding: 0
+        title: 'Task: Drag Page to Canvas',
+        description: `Expand your database in the sidebar and **drag the entry card you created** directly onto the canvas to place a page-link card.`,
+        target: null,
+        actionHint: '📄 Drag a database page from the sidebar onto the canvas grid',
+        checkTask: () => document.querySelectorAll('.canvas-node[data-node-type="pagelink"]').length > 0
       },
       {
         icon: '⚡',
-        title: 'Connecting Nodes',
-        description: `To connect two nodes, hover any node and look for the <strong>orange connection handle</strong> that appears on its edge. Drag from one handle to another node to create an arrow connection. Double-click a connection to delete it.`,
+        title: 'Task: Connect the Nodes',
+        description: `Hover over your text node and look for the circular connection handles on the edges. Drag from a handle to your page-link node to draw an arrow connection.`,
         target: '.canvas-viewport',
         placement: 'top',
-        padding: 0
-      },
-      {
-        icon: '📌',
-        title: 'Canvas Toolbar',
-        description: `The toolbar at the top has quick buttons for: <strong>fitting the view</strong>, toggling the <strong>mini-map</strong>, changing <strong>background grid style</strong>, and toggling <strong>snap-to-grid</strong>. Explore them all!`,
-        target: '.canvas-toolbar',
-        placement: 'bottom',
-        padding: 6
+        padding: 0,
+        actionHint: '⚡ Drag a line from one node\'s orange handle to another node',
+        checkTask: () => document.querySelectorAll('.canvas-connections path').length > 0
       },
       {
         icon: '📖',
-        title: 'Story Roadmap — Next Stop',
-        description: `Next, let's explore the <strong>Story Roadmap</strong> — a cinematic timeline for planning your narrative beats, acts, and story paths. Click <strong>Story Roadmap</strong> in the sidebar.`,
+        title: `Task: Open the ${terms.roadmap || 'Roadmap'}`,
+        description: `Wonderful! Next, let's explore the **${terms.roadmap || 'Story Roadmap'}** horizontal timeline. Click it in the sidebar.`,
         target: '[data-route="story-timeline"]',
         placement: 'right',
         requireClickOnTarget: true,
-        actionHint: '👆 Click "Story Roadmap" in the sidebar',
+        actionHint: `👆 Click "${terms.roadmap || 'Story Roadmap'}" in the sidebar`,
         onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 6 });
+          saveTutorialState({ active: true, currentPhase: 6, styleId });
           tutorial.stop(true);
         }
       }
@@ -765,74 +873,64 @@ export function runPhase5() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 6 — Story Roadmap (Timeline)
 // ═══════════════════════════════════════════════════════════════════════════════
-export function runPhase6() {
+export async function runPhase6() {
   const state = getTutorialState();
   if (!state.active || state.currentPhase !== 6) return;
+
+  const { styleId, styleConf, terms } = await getStyleInfo();
 
   setTimeout(() => {
     tutorial.start([
       {
         icon: '🎬',
-        title: 'The Story Roadmap',
-        description: `The <strong>Story Roadmap</strong> is a cinematic horizontal timeline for planning your entire narrative. Story beats are placed on swim lanes, organized into Acts, and connected with prerequisite arrows.`,
+        title: `The ${terms.roadmap || 'Roadmap'}`,
+        description: `This is the **${terms.roadmap || 'Story Roadmap'}** — a horizontal swimlane timeline for planning acts, beats, or levels. Let's try placing one.`,
         target: null
-      },
-      {
-        icon: '🏊',
-        title: 'Story Lanes',
-        description: `There are <strong>3 swim lanes</strong> (horizontal rows):<br>🔴 <strong>Main Plotline</strong> — your primary story<br>🟢 <strong>Subplots & Side Quests</strong> — character arcs and secondary threads<br>🔵 <strong>World Events & Backstory</strong> — lore events and background history`,
-        target: '.timeline-lane-headers',
-        placement: 'right',
-        padding: 4
-      },
-      {
-        icon: '🎭',
-        title: 'Acts (Story Structure)',
-        description: `The timeline is divided into <strong>Acts</strong> (Act I, Act II, Act III, Epilogue). Each act is a distinct visual band on the canvas. Position beat cards within acts to reflect your story's structure.`,
-        target: '.timeline-card-layer',
-        placement: 'top',
-        padding: 0
-      },
-      {
-        icon: '🃏',
-        title: 'Story Beat Cards',
-        description: `Each card on the timeline is a <strong>Story Beat</strong>. Double-click any card to open the edit modal where you can set the beat's title, synopsis, which lane it belongs to, and which characters are involved.`,
-        target: '.timeline-card-layer',
-        placement: 'top',
-        padding: 0
-      },
-      {
-        icon: '↔️',
-        title: 'Dragging Beats',
-        description: `<strong>Drag</strong> any beat card left or right to re-order it chronologically. Beats snap to the grid automatically. Dragging vertically snaps the beat into a different lane.`,
-        target: '.timeline-card-layer',
-        placement: 'top',
-        padding: 0
-      },
-      {
-        icon: '➡️',
-        title: 'Prerequisites & Narrative Flow',
-        description: `In the beat edit modal, you can set <strong>Prerequisites</strong> — other beats that must happen before this one. Forge draws animated Bezier curves connecting them, giving you a visual dependency map. Double-click any connection line to delete it.`,
-        target: '.timeline-connections-svg',
-        placement: 'top',
-        padding: 0
       },
       {
         icon: '➕',
-        title: 'Adding New Beats',
-        description: `Click the <strong>"+ Add Beat"</strong> button in the toolbar to create a new story beat. The <strong>"Auto-Align"</strong> button neatly re-spaces all beats in each lane if things get crowded.`,
-        target: null
+        title: `Task: Add a Beat`,
+        description: `Click the **+ Add Beat** (or **+ Add Level/Zone**) button in the timeline toolbar to place a card on the grid.`,
+        target: '.stc-btn-primary',
+        placement: 'bottom',
+        actionHint: `👆 Click "+ Add Beat" in the toolbar`,
+        onEnter: () => {
+          tutorial.initialBeatCount = document.querySelectorAll('.stc-card').length;
+        },
+        checkTask: () => document.querySelectorAll('.stc-card').length > tutorial.initialBeatCount
+      },
+      {
+        icon: '↔️',
+        title: 'Task: Drag the Beat',
+        description: `Try **dragging** the beat card left or right to re-order it chronologically, or drag it vertically to move it to a different swim lane.`,
+        target: '.stc-card',
+        placement: 'top',
+        actionHint: '↔️ Drag the beat card to change its position',
+        onEnter: () => {
+          tutorial.initialCardPositions = {};
+          document.querySelectorAll('.stc-card').forEach(card => {
+            tutorial.initialCardPositions[card.dataset.beatId] = { left: card.style.left };
+          });
+        },
+        checkTask: () => {
+          const cards = document.querySelectorAll('.stc-card');
+          for (const card of cards) {
+            const initial = tutorial.initialCardPositions?.[card.dataset.beatId];
+            if (initial && card.style.left !== initial.left) return true;
+          }
+          return false;
+        }
       },
       {
         icon: '🕸️',
-        title: 'Web of Fate — Next Stop',
-        description: `Next up: the <strong>Web of Fate</strong> — a dynamic graph that visualizes ALL your database entries as interconnected nodes. Click it in the sidebar to continue.`,
+        title: `Task: Open the ${terms.fate || 'Fate Web'}`,
+        description: `Awesome! Now click **${terms.fate || 'Web of Fate'}** in the sidebar to view your universe's connections in a force-directed graph.`,
         target: '[data-route="graph"]',
         placement: 'right',
         requireClickOnTarget: true,
-        actionHint: '👆 Click "Web of Fate" in the sidebar',
+        actionHint: `👆 Click "${terms.fate || 'Web of Fate'}" in the sidebar`,
         onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 7 });
+          saveTutorialState({ active: true, currentPhase: 7, styleId });
           tutorial.stop(true);
         }
       }
@@ -843,52 +941,51 @@ export function runPhase6() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 7 — Web of Fate (Graph View)
 // ═══════════════════════════════════════════════════════════════════════════════
-export function runPhase7() {
+export async function runPhase7() {
   const state = getTutorialState();
   if (!state.active || state.currentPhase !== 7) return;
+
+  const { styleId, styleConf, terms } = await getStyleInfo();
 
   setTimeout(() => {
     tutorial.start([
       {
         icon: '🕸️',
-        title: 'The Web of Fate',
-        description: `The <strong>Web of Fate</strong> automatically renders every page in your project as a node in a force-directed graph. Related entries pull toward each other — giving you a bird's-eye view of your entire universe's structure.`,
+        title: `The ${terms.fate || 'Fate Web'}`,
+        description: `The **${terms.fate || 'Web of Fate'}** automatically renders every page in your project as a node in a physics-based graph. Connections draw between referenced pages. Let's interact with it.`,
         target: null
       },
       {
-        icon: '🔵',
-        title: 'Nodes & Clusters',
-        description: `Each <strong>node</strong> represents one database entry. Nodes are color-coded by database type. Entries that reference each other appear as <strong>connected edges</strong>. Clusters reveal which characters, factions, and locations are most interconnected.`,
-        target: '.graph-canvas',
-        placement: 'right',
-        padding: 0
-      },
-      {
-        icon: '🖱️',
-        title: 'Interacting with the Graph',
-        description: `<strong>Click</strong> any node to highlight its connections and see a quick info panel.<br><strong>Double-click</strong> a node to open that entry's full page editor.<br><strong>Drag</strong> nodes to manually reposition them — the physics engine re-adapts.`,
-        target: '.graph-canvas',
-        placement: 'right',
-        padding: 0
-      },
-      {
         icon: '🔍',
-        title: 'Graph Search & Filters',
-        description: `Use the <strong>search bar</strong> and <strong>database filters</strong> in the graph toolbar to highlight specific entries or hide entire database types. This helps you focus on just characters, or just locations, etc.`,
+        title: 'Task: Filter the Graph',
+        description: `Try typing in the search box in the graph toolbar, or click the **Recenter Graph** button to re-focus the view.`,
         target: '.graph-toolbar',
         placement: 'bottom',
-        padding: 4
+        padding: 4,
+        actionHint: '🔍 Type in search or click the focus target icon',
+        onEnter: () => {
+          tutorial.recenterClicked = false;
+          const btn = document.getElementById('graph-recenter-btn');
+          if (btn) {
+            btn.addEventListener('click', () => { tutorial.recenterClicked = true; }, { once: true });
+          }
+        },
+        checkTask: () => {
+          const input = document.getElementById('graph-search');
+          if (input && input.value.trim().length > 0) return true;
+          return tutorial.recenterClicked === true;
+        }
       },
       {
         icon: '📬',
-        title: 'Inbox — Next Stop',
-        description: `Now let's look at the <strong>Inbox</strong> — your notifications center for reminders, AI-generated suggestions, and system alerts. Click <strong>Inbox</strong> in the sidebar.`,
+        title: 'Task: Open the Inbox',
+        description: `Click **Inbox** in the sidebar to visit your notifications and suggestions center.`,
         target: '[data-route="inbox"]',
         placement: 'right',
         requireClickOnTarget: true,
         actionHint: '👆 Click "Inbox" in the sidebar',
         onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 8 });
+          saveTutorialState({ active: true, currentPhase: 8, styleId });
           tutorial.stop(true);
         }
       }
@@ -899,36 +996,31 @@ export function runPhase7() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 8 — Inbox
 // ═══════════════════════════════════════════════════════════════════════════════
-export function runPhase8() {
+export async function runPhase8() {
   const state = getTutorialState();
   if (!state.active || state.currentPhase !== 8) return;
+
+  const { styleId, styleConf, terms } = await getStyleInfo();
 
   setTimeout(() => {
     tutorial.start([
       {
         icon: '📬',
         title: 'The Inbox',
-        description: `The <strong>Inbox</strong> is your notification center for Forge. It collects writing reminders, AI suggestions, system notices, and any alerts that Forge sends you while you work.`,
-        target: null
-      },
-      {
-        icon: '🔔',
-        title: 'Writing Reminders',
-        description: `Enable <strong>daily writing reminders</strong> in Settings → Reminders. Forge will notify you at a time you choose to keep your creative momentum going. Missed reminders appear here in your Inbox.`,
+        description: `The **Inbox** lists writing reminders, AI suggestions, and system notices. Let's check out your AI creative companion.`,
         target: null
       },
       {
         icon: '⚡',
-        title: 'Ignis Companion — Next Stop',
-        description: `Now let's explore <strong>Ignis</strong>, your AI writing companion. Click the <em>⚡ Ignis Companion</em> button at the bottom of the sidebar to open the AI drawer!`,
+        title: 'Task: Open Ignis Companion',
+        description: `Click the **⚡ Ignis Companion** button at the bottom of the sidebar to slide open the AI assistant drawer.`,
         target: '.sidebar-ai-toggle-btn',
         placement: 'right',
         requireClickOnTarget: true,
         actionHint: '👆 Click "Ignis Companion" at the bottom of the sidebar',
         onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 9 });
+          saveTutorialState({ active: true, currentPhase: 9, styleId });
           tutorial.stop(true);
-          // Drawer opens in place — no page-rendered fires, so call directly
           setTimeout(() => runPhase9(), 700);
         }
       }
@@ -939,53 +1031,47 @@ export function runPhase8() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 9 — Ignis AI Companion Drawer
 // ═══════════════════════════════════════════════════════════════════════════════
-export function runPhase9() {
+export async function runPhase9() {
   const state = getTutorialState();
   if (!state.active || state.currentPhase !== 9) return;
+
+  const { styleId, styleConf, terms } = await getStyleInfo();
 
   setTimeout(() => {
     const drawerEl = document.querySelector('.ai-drawer') || document.querySelector('[class*="ai-drawer"]');
     tutorial.start([
       {
         icon: '🔥',
-        title: 'Meet Ignis — Your AI Companion',
-        description: `<strong>Ignis</strong> is an AI creative partner powered by Google Gemini, fully trained on your universe. Ask it anything about your world, your characters, or your story. Ignis reads your actual database entries to give you grounded, lore-accurate answers.`,
-        target: drawerEl || null,
+        title: 'Ignis AI Companion',
+        description: `**Ignis** reads your project pages to answer questions grounded in your lore. You can choose different personalities in settings (Sage, Spark, Scholar, Shadow). Let's chat.`,
+        target: '#ai-drawer',
         placement: 'left',
         padding: 0
       },
       {
         icon: '💬',
-        title: 'Chatting with Ignis',
-        description: `Type any question in the chat box at the bottom of the drawer. Examples:<br>• <em>"What are Kira's motivations?"</em><br>• <em>"Suggest 3 plot twists for Act 2"</em><br>• <em>"Write a short encounter between the Voss siblings"</em>`,
-        target: drawerEl || null,
+        title: 'Task: Ask Ignis a Question',
+        description: `Type a question or idea prompt in the chat box at the bottom of the drawer (e.g. 'Give me three ideas') and press **Enter** to send it.`,
+        target: '#ai-drawer',
         placement: 'left',
-        padding: 0
-      },
-      {
-        icon: '🎨',
-        title: 'Ignis Personalities',
-        description: `In <strong>Settings → AI Companion</strong>, you can choose Ignis's personality:<br>🔮 <strong>Sage</strong> — wise, analytical<br>⚡ <strong>Spark</strong> — energetic, enthusiastic<br>🌑 <strong>Shadow</strong> — mysterious, dark<br>📖 <strong>Scholar</strong> — precise, academic`,
-        target: null
-      },
-      {
-        icon: '⚡',
-        title: 'Forge Actions (AI Commands)',
-        description: `Ignis can take <strong>direct actions</strong> in your workspace. Type commands like:<br>• <em>"Create a new character named Sora Vane"</em><br>• <em>"Add a tag 'antagonist' to Kira's page"</em><br>Ignis will ask for confirmation before making any changes.`,
-        target: null
+        padding: 0,
+        actionHint: '💬 Type a message in the input and press Enter',
+        onEnter: () => {
+          tutorial.initialMessageCount = document.querySelectorAll('.ai-bubble').length;
+        },
+        checkTask: () => document.querySelectorAll('.ai-bubble').length > tutorial.initialMessageCount
       },
       {
         icon: '🎬',
-        title: 'Scene Mode — Next Stop',
-        description: `Beyond chat, Ignis has a dedicated <strong>Scene Mode</strong> for co-writing entire scenes paragraph by paragraph. Click the <em>🎬 Scene Mode</em> button in the sidebar to try it!`,
+        title: 'Task: Try Scene Mode',
+        description: `Ignis also has a dedicated co-writing **Scene Mode** for drafting scenes paragraph-by-paragraph. Click **Scene Mode** in the sidebar.`,
         target: '.sidebar-scene-mode-btn',
         placement: 'right',
         requireClickOnTarget: true,
-        actionHint: '👆 Click "Scene Mode" at the bottom of the sidebar',
+        actionHint: '👆 Click "Scene Mode" in the sidebar',
         onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 10 });
+          saveTutorialState({ active: true, currentPhase: 10, styleId });
           tutorial.stop(true);
-          // Scene Mode opens a drawer — no page-rendered fires, so call directly
           setTimeout(() => runPhase10(), 700);
         }
       }
@@ -996,9 +1082,11 @@ export function runPhase9() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 10 — Scene Mode Drawer
 // ═══════════════════════════════════════════════════════════════════════════════
-export function runPhase10() {
+export async function runPhase10() {
   const state = getTutorialState();
   if (!state.active || state.currentPhase !== 10) return;
+
+  const { styleId, styleConf, terms } = await getStyleInfo();
 
   setTimeout(() => {
     const drawerEl = document.querySelector('.scene-mode-drawer');
@@ -1006,115 +1094,84 @@ export function runPhase10() {
       {
         icon: '🎬',
         title: 'Ignis Scene Mode',
-        description: `<strong>Scene Mode</strong> is a dedicated co-writing panel where you and Ignis collaboratively write a scene, one paragraph at a time. It's great for drafting complex scenes with multiple characters in specific locations.`,
-        target: drawerEl || null,
-        placement: 'left',
-        padding: 0
-      },
-      {
-        icon: '📍',
-        title: 'Set the Scene Context',
-        description: `Fill in the <strong>context form</strong> at the top of the panel:<br>• <strong>Location</strong> — where is this scene set?<br>• <strong>Characters</strong> — add characters from your DB or type custom names<br>• <strong>Premise</strong> — what just happened? what's the setup?<br>• <strong>Tone</strong> — Dramatic, Tense, Humorous, Mysterious, etc.`,
-        target: drawerEl || null,
+        description: `Scene Mode lets you write collaborative drafts. You select the location, premise, and characters, and Ignis generates suggestions paragraph by paragraph.`,
+        target: '#scene-mode-drawer',
         placement: 'left',
         padding: 0
       },
       {
         icon: '✍️',
-        title: 'Paragraph-by-Paragraph Writing',
-        description: `Ignis generates <strong>5 paragraphs</strong> one at a time. Each paragraph has <em>Accept ✓</em> and <em>Reject ✕</em> buttons. If you reject a paragraph, Ignis instantly rewrites just that one. Once you accept one, the next paragraph appears.`,
-        target: drawerEl || null,
+        title: 'Task: Generate a Draft',
+        description: `Click **Generate Scene Draft** to write your first co-authored paragraph. (If you don't have a Gemini API key configured in settings yet, you can skip this step).`,
+        target: '#scene-mode-drawer',
         placement: 'left',
-        padding: 0
-      },
-      {
-        icon: '💬',
-        title: 'Bonus: Dialogue & What Ifs',
-        description: `After accepting paragraphs, extra buttons appear:<br>• <strong>Generate Dialogue</strong> — 3 exchanges between your scene's characters<br>• <strong>What If?</strong> — 3 alternate outcomes for the scene<br>• <strong>Copy All Accepted</strong> — copy your scene draft to clipboard`,
-        target: null
+        padding: 0,
+        actionHint: '🎬 Click "Generate Scene Draft" to co-write',
+        checkTask: () => {
+          if (document.querySelector('.scene-api-key-msg')) return true; // bypass if no key
+          return document.querySelectorAll('.scene-para-text, .scene-para-actions').length > 0;
+        }
       },
       {
         icon: '🔺',
-        title: 'Continuity Engine — Next Stop',
-        description: `Next, let's explore the <strong>Continuity Engine</strong> — Ignis's passive background scanner that detects narrative inconsistencies in your world as you write. Close Scene Mode (✕) then click <em>Continuity</em> in the sidebar.`,
-        target: null
+        title: 'Task: Open Continuity Engine',
+        description: `Awesome! Now close the Scene Mode drawer by clicking the **✕** in the top-right. Then click **Continuity** in the sidebar to see the passive background scanner.`,
+        target: '[data-route="continuity"]',
+        placement: 'right',
+        requireClickOnTarget: true,
+        actionHint: '👆 Click "Continuity" in the sidebar',
+        onTargetClick: () => {
+          saveTutorialState({ active: true, currentPhase: 11, styleId });
+        }
       }
-    ], {
-      onFinish: () => {
-        saveTutorialState({ active: true, currentPhase: 11 });
-        // Navigate to continuity
-        import('./router.js').then(m => m.navigate('continuity')).catch(() => {
-          window.location.hash = '#/continuity';
-        });
-      }
-    });
+    ]);
   }, 600);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 11 — Continuity Engine
 // ═══════════════════════════════════════════════════════════════════════════════
-export function runPhase11() {
+export async function runPhase11() {
   const state = getTutorialState();
   if (!state.active || state.currentPhase !== 11) return;
+
+  const { styleId, styleConf, terms } = await getStyleInfo();
 
   setTimeout(() => {
     tutorial.start([
       {
         icon: '🔺',
         title: 'The Continuity Engine',
-        description: `The <strong>Continuity Engine</strong> is Ignis's passive quality-control scanner. It continuously monitors your world for narrative inconsistencies, broken links, dead-end story threads, and character conflicts.`,
+        description: `The Continuity Engine passively scans your universe for plot conflicts, character age discrepancies, broken links, or timeline issues as you write.`,
         target: null
-      },
-      {
-        icon: '🚨',
-        title: 'Live Continuity Alerts',
-        description: `When Ignis detects a new issue while you're writing, a <strong>pop-up alert</strong> appears at the bottom of the screen. Clicking it brings you here to see the full breakdown. The <em>Continuity</em> sidebar item also shows a <strong>live badge</strong> with severity counts (🔴 high / 🟠 medium / 🟡 low).`,
-        target: '#sidebar-continuity-item',
-        placement: 'right',
-        padding: 4
-      },
-      {
-        icon: '📋',
-        title: 'Issue Cards',
-        description: `Each detected issue is shown as a card with:<br>• <strong>Type</strong> — Location Conflict, Personality Mismatch, Timeline Contradiction, Broken Link, Orphaned Entry, etc.<br>• <strong>Severity</strong> — High 🔴, Medium 🟠, or Low 🟡<br>• <strong>Description</strong> and an AI <strong>Suggestion</strong> on how to fix it<br>• <strong>Linked Pages</strong> — click to jump directly to the affected entry`,
-        target: '.ce-issue-list',
-        placement: 'right',
-        padding: 4
-      },
-      {
-        icon: '🗂️',
-        title: 'Filtering Issues',
-        description: `Use the <strong>tabs</strong> at the top to filter issues by severity (All / High / Medium / Low) or view your <strong>Resolved</strong> issues archive. Dismissing an issue moves it to Resolved — you can always restore it later.`,
-        target: '.ce-tabs',
-        placement: 'bottom',
-        padding: 4
       },
       {
         icon: '🔍',
-        title: 'Manual Scan',
-        description: `Click <strong>"🔍 Scan Now"</strong> to trigger an immediate full scan of your world. Ignis analyzes all pages, story beats, and canvas connections to find issues. The scan runs automatically in the background as you edit, but you can also trigger it manually any time.`,
+        title: 'Task: Scan Your Project',
+        description: `Click the **Scan Now** button to perform an immediate, full integrity scan of your database entries and timeline links.`,
         target: '.ce-scan-btn',
         placement: 'bottom',
-        padding: 4
+        padding: 4,
+        actionHint: '🔍 Click the "Scan Now" button',
+        onEnter: () => {
+          tutorial.scanTriggered = false;
+          const btn = document.querySelector('.ce-scan-btn');
+          if (btn) {
+            btn.addEventListener('click', () => { tutorial.scanTriggered = true; }, { once: true });
+          }
+        },
+        checkTask: () => tutorial.scanTriggered === true
       },
       {
         icon: '⚙️',
-        title: 'Toggling Continuity Monitoring',
-        description: `You can <strong>enable or disable</strong> the Continuity Engine entirely in <em>Settings → AI Companion</em>. When disabled, the Continuity tab disappears from the sidebar and no background scanning occurs.`,
-        target: null
-      },
-      {
-        icon: '⚙️',
-        title: 'Settings — Final Stop',
-        description: `Last stop: <strong>Settings</strong> — where you configure every aspect of Forge. Click the <em>⚙️ Settings</em> item at the bottom of the sidebar.`,
+        title: 'Task: Open Settings',
+        description: `Great job! Now let's wrap up in Settings. Click **Settings** (or the gear icon ⚙️) at the bottom of the sidebar.`,
         target: '[data-route="settings"]',
         placement: 'top',
         requireClickOnTarget: true,
         actionHint: '👆 Click "Settings" in the sidebar',
         onTargetClick: () => {
-          saveTutorialState({ active: true, currentPhase: 12 });
-          tutorial.stop(true);
+          saveTutorialState({ active: true, currentPhase: 12, styleId });
         }
       }
     ]);
@@ -1124,73 +1181,89 @@ export function runPhase11() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PHASE 12 — Settings
 // ═══════════════════════════════════════════════════════════════════════════════
-export function runPhase12() {
+export async function runPhase12() {
   const state = getTutorialState();
   if (!state.active || state.currentPhase !== 12) return;
+
+  const { styleId, styleConf, terms } = await getStyleInfo();
 
   setTimeout(() => {
     tutorial.start([
       {
         icon: '⚙️',
-        title: 'Forge Control Center',
-        description: `The <strong>Settings</strong> page is organized into tabs. Each tab controls a different area of the app. Let's walk through the most important ones.`,
+        title: 'Forge Settings',
+        description: `Settings is organized into tabs where you configure project name, Firebase sync, API keys, and custom visual options. Let's try changing a style.`,
         target: null
       },
       {
-        icon: '📁',
-        title: 'General / Project Settings',
-        description: `The <strong>General</strong> tab lets you rename your universe and set its genre (e.g. "Sci-Fi RPG"). This information is used by Ignis as context when answering questions about your world.`,
-        target: '[data-tab="project"]',
+        icon: '🎨',
+        title: 'Task: Open Visual Settings',
+        description: `Click the **Visuals & Themes** (or **Visuals**) tab to customize themes.`,
+        target: '[data-tab="visuals"]',
         placement: 'right',
-        padding: 4
+        padding: 4,
+        actionHint: '👆 Click the "Visuals" tab button',
+        checkTask: () => {
+          const tabBtn = document.querySelector('.settings-tab-btn[data-tab="visuals"]');
+          return tabBtn && tabBtn.classList.contains('active');
+        }
       },
       {
         icon: '🎨',
-        title: 'Visuals & Themes',
-        description: `In <strong>Visuals & Themes</strong>, choose between:<br>• <strong>Dark Mode</strong> (default, deep space)<br>• <strong>Light Mode</strong> (clean paper white)<br>• <strong>Cosmic Mode</strong> (deep purple)<br>• <strong>Custom Accent Color</strong> — change Forge's entire color scheme to any hex color you like.`,
-        target: '[data-tab="visuals"]',
+        title: 'Task: Change Theme or Accent',
+        description: `Try customizing Forge's appearance! Click a **Theme Mode** button (like Light, Cyberpunk, or Obsidian) or click a **Highlight Accent Color** preset to change the accent scheme.`,
+        target: '.theme-select-btn',
         placement: 'right',
-        padding: 4
-      },
-      {
-        icon: '💾',
-        title: 'Storage & Sync',
-        description: `The <strong>Storage & Sync</strong> tab shows where your project data is stored. Forge stores data locally by default (IndexedDB). You can also connect <strong>Firebase</strong> for cloud sync — great for working across multiple machines.`,
-        target: '[data-tab="storage"]',
-        placement: 'right',
-        padding: 4
-      },
-      {
-        icon: '🔔',
-        title: 'Writing Reminders',
-        description: `Under <strong>Reminders</strong>, enable a daily notification to keep yourself writing consistently. Set the time you want to be reminded, and Forge will send a system notification every day at that time — even when the app is minimized.`,
-        target: '[data-tab="notifications"]',
-        placement: 'right',
-        padding: 4
+        padding: 8,
+        actionHint: '🎨 Change theme or custom accent color',
+        onEnter: () => {
+          tutorial.initialTheme = localStorage.getItem('forge-theme') || 'dark';
+          tutorial.initialAccent = localStorage.getItem('forge-custom-accent') || '';
+        },
+        checkTask: () => {
+          const currentTheme = localStorage.getItem('forge-theme') || 'dark';
+          const currentAccent = localStorage.getItem('forge-custom-accent') || '';
+          return currentTheme !== tutorial.initialTheme || currentAccent !== tutorial.initialAccent;
+        }
       },
       {
         icon: '🔥',
-        title: 'AI Companion Settings',
-        description: `The <strong>AI Companion</strong> tab is where you:<br>• Paste your <strong>Google Gemini API key</strong> to unlock Ignis<br>• Choose Ignis's <strong>personality</strong> (Sage, Spark, Shadow, Scholar)<br>• Toggle the <strong>Continuity Engine</strong> on/off`,
+        title: 'Task: Open AI Settings',
+        description: `Click the **AI Companion** tab. This is where you configure Ignis's personality (Sage, Spark, Scholar, Shadow) and toggle background scanning.`,
         target: '[data-tab="ai"]',
         placement: 'right',
-        padding: 4
+        padding: 4,
+        actionHint: '👆 Click the "AI Companion" tab button',
+        checkTask: () => {
+          const tabBtn = document.querySelector('.settings-tab-btn[data-tab="ai"]');
+          return tabBtn && tabBtn.classList.contains('active');
+        }
       },
       {
         icon: '📜',
-        title: 'Updates',
-        description: `The <strong>Updates</strong> tab shows your current app version and checks for new Forge releases. When an update is available, a dot badge appears on the Settings sidebar item. Click "Download & Install" here to update the app in one click.`,
+        title: 'Task: Open Updates Settings',
+        description: `Click the **Updates** tab. This checks for new Forge releases and lets you download them in one click.`,
         target: '[data-tab="updates"]',
         placement: 'right',
-        padding: 4
+        padding: 4,
+        actionHint: '👆 Click the "Updates" tab button',
+        checkTask: () => {
+          const tabBtn = document.querySelector('.settings-tab-btn[data-tab="updates"]');
+          return tabBtn && tabBtn.classList.contains('active');
+        }
       },
       {
         icon: '🔗',
-        title: 'Broken Links Checker',
-        description: `The <strong>Broken Links</strong> tab scans your entire project for database entries that reference deleted or missing pages. Fix orphaned references quickly before they cause Continuity Engine alerts.`,
+        title: 'Task: Open Broken Links Checker',
+        description: `Click the **Broken Links** tab. This scans your project for orphaned references.`,
         target: '[data-tab="links"]',
         placement: 'right',
-        padding: 4
+        padding: 4,
+        actionHint: '👆 Click the "Broken Links" tab button',
+        checkTask: () => {
+          const tabBtn = document.querySelector('.settings-tab-btn[data-tab="links"]');
+          return tabBtn && tabBtn.classList.contains('active');
+        }
       },
       {
         icon: '🎉',
