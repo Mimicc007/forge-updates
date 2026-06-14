@@ -1130,13 +1130,13 @@ export async function runPhase9() {
           placement: 'bottom',
           requireClickOnTarget: true,
           actionHint: '👆 Click the "D&D Stat Block" button to spawn it',
-          checkTask: () => !!document.querySelector('.canvas-node[data-type="statblock"]')
+          checkTask: () => !!document.querySelector('.canvas-node[data-node-type="statblock"]')
         },
         {
           icon: '🛡️',
           title: 'D&D Stat Block',
           description: `This is your interactive <strong>D&D Stat Block</strong>. You can track HP, AC, abilities, saving throws, and click on skills or attacks to auto-roll them directly inside the app!`,
-          target: () => document.querySelector('.canvas-node[data-type="statblock"]'),
+          target: () => document.querySelector('.canvas-node[data-node-type="statblock"]'),
           placement: 'right',
           padding: 4
         },
@@ -1148,13 +1148,13 @@ export async function runPhase9() {
           placement: 'bottom',
           requireClickOnTarget: true,
           actionHint: '👆 Click the "Encounter Builder" button to spawn it',
-          checkTask: () => !!document.querySelector('.canvas-node[data-type="encounter"]')
+          checkTask: () => !!document.querySelector('.canvas-node[data-node-type="encounter"]')
         },
         {
           icon: '⚔️',
           title: 'Encounter Builder',
           description: `This is your <strong>Encounter Builder</strong>. Track initiative order, monitor combatant health, and automatically calculate combat difficulty ratings.`,
-          target: () => document.querySelector('.canvas-node[data-type="encounter"]'),
+          target: () => document.querySelector('.canvas-node[data-node-type="encounter"]'),
           placement: 'right',
           padding: 4
         },
@@ -1187,13 +1187,13 @@ export async function runPhase9() {
           placement: 'bottom',
           requireClickOnTarget: true,
           actionHint: '👆 Click the "Behavior Node" button to spawn it',
-          checkTask: () => !!document.querySelector('.canvas-node[data-type="flowchart"]')
+          checkTask: () => !!document.querySelector('.canvas-node[data-node-type="flowchart"]')
         },
         {
           icon: '🔄',
           title: 'Behavior Node',
           description: `This is a <strong>Behavior Node</strong>. Use it to flowchart state machines, map player choice branches, or document complex game mechanics.`,
-          target: () => document.querySelector('.canvas-node[data-type="flowchart"]'),
+          target: () => document.querySelector('.canvas-node[data-node-type="flowchart"]'),
           placement: 'right',
           padding: 4
         },
@@ -1205,13 +1205,13 @@ export async function runPhase9() {
           placement: 'bottom',
           requireClickOnTarget: true,
           actionHint: '👆 Click the "Progression Calc" button to spawn it',
-          checkTask: () => !!document.querySelector('.canvas-node[data-type="progression"]')
+          checkTask: () => !!document.querySelector('.canvas-node[data-node-type="progression"]')
         },
         {
           icon: '📈',
           title: 'Progression Calc',
           description: `This is a <strong>Progression Calculator</strong>. Plot curves to balance player level scaling, experience points, or resource economies.`,
-          target: () => document.querySelector('.canvas-node[data-type="progression"]'),
+          target: () => document.querySelector('.canvas-node[data-node-type="progression"]'),
           placement: 'right',
           padding: 4
         },
@@ -1279,6 +1279,7 @@ export async function runPhase9() {
     });
   }, 600);
 }
+
 
 
 // =================================══════════════════════════════════════════════
