@@ -852,7 +852,7 @@ export async function runPhase6() {
           }
           return null;
         },
-        placement: 'bottom',
+        placement: 'right',
         requireClickOnTarget: true,
         actionHint: "👆 Click on 'The Spark' beat card to continue",
         onTargetClick: () => {
@@ -891,7 +891,7 @@ export async function runPhase7() {
           }
           return null;
         },
-        placement: 'bottom',
+        placement: 'right',
         requireClickOnTarget: true,
         onTargetClick: () => {
           saveTutorialState({ active: true, currentPhase: 7, styleId });
@@ -985,7 +985,7 @@ export async function runPhase8() {
           }
           return null;
         },
-        placement: 'bottom',
+        placement: 'right',
         actionHint: '🖱️ Double-click the beat card to open the canvas',
         checkTask: () => window.location.hash.includes('workspace/'),
         onTaskComplete: () => {
