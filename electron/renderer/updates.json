@@ -1,0 +1,42 @@
+[
+  {
+    "version": "v0.1.2-alpha",
+    "date": "2026-06-09",
+    "title": "Dynamic Updates & Auto-Downloader",
+    "type": "major",
+    "downloadUrl": "http://localhost:5173/Forge-Setup.exe",
+    "changes": [
+      "Implemented dynamic updates checker calling remote/local endpoints",
+      "Added automatic update downloader and installer bridge",
+      "Refactored changelog notes to load dynamically"
+    ]
+  },
+  {
+    "version": "v0.1.1-alpha",
+    "date": "2026-06-08",
+    "title": "Self-Repair, Settings Sync & Visual Polish",
+    "type": "patch",
+    "changes": [
+      "Added IndexedDB automatic corruption recovery system with backup alert",
+      "Fixed window control collision in Canvas workspace toolbar",
+      "Synchronized all user settings directly inside the project file to prevent loss",
+      "Applied themes and accents early on boot to prevent style resetting",
+      "Fixed tab switching visual toggle state reset bug",
+      "Added hover canvas delete button in the sidebar"
+    ]
+  },
+  {
+    "version": "v0.1.0-alpha",
+    "date": "2026-06-04",
+    "title": "The Forge Begins",
+    "type": "major",
+    "changes": [
+      "Initial release of the Forge Universal Knowledge System",
+      "Interactive visual canvas workspace added",
+      "Dynamic schema-driven database system",
+      "Full rich text editing support via Quill",
+      "Custom built spotlight tutorial engine",
+      "Native Windows .exe packaging complete"
+    ]
+  }
+]
