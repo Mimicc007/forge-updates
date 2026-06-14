@@ -1,5 +1,19 @@
 [
   {
+    "version": "v0.1.7-alpha",
+    "date": "2026-06-14",
+    "title": "Map Pins Resize & Ollama Integration Patch",
+    "type": "patch",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.1.7-alpha/Forge-Setup-0.1.7-alpha.exe",
+    "changes": [
+      "Added Ollama installation prompt for new users if Ollama is not installed",
+      "Implemented map pin resizing by clicking to highlight and dragging the bottom-right handle",
+      "Added right-click premium spatial context menu for map pins (Edit Details, Open Entry, Show/Hide Text, Delete Pin)",
+      "Fixed map pin highlight flashing bug caused by zero-drift click auto-saving",
+      "Added drag and drop database items directly onto sidebar canvas names to import and navigate"
+    ]
+  },
+  {
     "version": "v0.1.6-alpha",
     "date": "2026-06-11",
     "title": "Tutorial & Drawer Polish Patch",
