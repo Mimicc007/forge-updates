@@ -1,0 +1,106 @@
+[
+  {
+    "version": "v0.1.7-alpha",
+    "date": "2026-06-14",
+    "title": "Map Pins Resize & Ollama Integration Patch",
+    "type": "patch",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.1.7-alpha/Forge-Setup-0.1.7-alpha.exe",
+    "changes": [
+      "Added Ollama installation prompt for new users if Ollama is not installed",
+      "Implemented map pin resizing by clicking to highlight and dragging the bottom-right handle",
+      "Added right-click premium spatial context menu for map pins (Edit Details, Open Entry, Show/Hide Text, Delete Pin)",
+      "Fixed map pin highlight flashing bug caused by zero-drift click auto-saving",
+      "Added drag and drop database items directly onto sidebar canvas names to import and navigate"
+    ]
+  },
+  {
+    "version": "v0.1.6-alpha",
+    "date": "2026-06-11",
+    "title": "Tutorial & Drawer Polish Patch",
+    "type": "patch",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.1.6-alpha/Forge-Setup-0.1.6-alpha.exe",
+    "changes": [
+      "Fixed tutorial progression blocks when clicking Ignis and Scene Mode sidebar icons",
+      "Implemented drawer mutual exclusivity so opening Ignis auto-closes Scene Mode and vice-versa",
+      "Auto-close active drawers on route navigation"
+    ]
+  },
+  {
+    "version": "v0.1.5-alpha",
+    "date": "2026-06-11",
+    "title": "Continuity Engine & Settings Polish",
+    "type": "patch",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.1.5-alpha/Forge-Setup-0.1.5-alpha.exe",
+    "changes": [
+      "Upgraded Continuity view into a dedicated full page with active filters, quick nav, and resolution logs",
+      "Added premium slide-in Ignis Continuity Alert popups when story conflicts are found",
+      "Created a master switch toggle in AI settings to disable the scan engine and hide the sidebar tab in real-time",
+      "Polished settings toggle switch sliders to dynamically follow theme colors and custom accents"
+    ]
+  },
+  {
+    "version": "v0.1.4-alpha",
+    "date": "2026-06-11",
+    "title": "Ignis Scene Mode & Continuity Patch",
+    "type": "patch",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.1.4-alpha/Forge-Setup-0.1.4-alpha.exe",
+    "changes": [
+      "Added Ignis Scene Mode co-writing drawer with paragraph accept/reject logic",
+      "Integrated smart Continuity Monitor checking for plot, timeline, and trait contradictions",
+      "Exposed pulsing alert badge and interactive resolution modal for continuity issues",
+      "Fixed Quick Capture window autosave race condition to prevent loss of captured notes"
+    ]
+  },
+  {
+    "version": "v0.1.3-alpha",
+    "date": "2026-06-11",
+    "title": "Living Document & Broken Links Patch",
+    "type": "patch",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.1.3-alpha/Forge.Setup.0.1.3-alpha.exe",
+    "changes": [
+      "Upgraded Canvas notes to Quill editors, enabling bi-directional [[ autocomplete links",
+      "Added Broken Links Detector tab to scan and repair missing page links",
+      "Fixed Electron auto-updater file-locking crash during automatic restarts"
+    ]
+  },
+  {
+    "version": "v0.1.2-alpha",
+    "date": "2026-06-09",
+    "title": "Dynamic Updates & Auto-Downloader",
+    "type": "major",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.1.1-alpha/Forge.Setup.0.1.1-alpha.exe",
+    "changes": [
+      "Implemented dynamic updates checker calling remote/local endpoints",
+      "Added automatic update downloader and installer bridge",
+      "Refactored changelog notes to load dynamically"
+    ]
+  },
+  {
+    "version": "v0.1.1-alpha",
+    "date": "2026-06-08",
+    "title": "Self-Repair, Settings Sync & Visual Polish",
+    "type": "patch",
+    "changes": [
+      "Added IndexedDB automatic corruption recovery system with backup alert",
+      "Fixed window control collision in Canvas workspace toolbar",
+      "Synchronized all user settings directly inside the project file to prevent loss",
+      "Applied themes and accents early on boot to prevent style resetting",
+      "Fixed tab switching visual toggle state reset bug",
+      "Added hover canvas delete button in the sidebar"
+    ]
+  },
+  {
+    "version": "v0.1.0-alpha",
+    "date": "2026-06-04",
+    "title": "The Forge Begins",
+    "type": "major",
+    "changes": [
+      "Initial release of the Forge Universal Knowledge System",
+      "Interactive visual canvas workspace added",
+      "Dynamic schema-driven database system",
+      "Full rich text editing support via Quill",
+      "Custom built spotlight tutorial engine",
+      "Native Windows .exe packaging complete"
+    ]
+  }
+]
