@@ -151,6 +151,9 @@ export async function renderWorkspace(container, params) {
     container
   };
 
+  window.canvasState = canvasState;
+  window.panToNode = panToNode;
+
   // Track active canvas tab for sidebar drop-to-canvas feature
   localStorage.setItem('forge-active-tab-id', tabId);
 

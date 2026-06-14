@@ -82,6 +82,21 @@ class SpotlightTutorial {
           flex-direction: column;
           gap: 10px;
         }
+        .forge-tut-highlighted-target {
+          outline: 3px solid var(--accent-primary, #e5a93b) !important;
+          outline-offset: 4px !important;
+          box-shadow: 0 0 25px var(--accent-primary, #e5a93b), inset 0 0 10px rgba(229,169,59,0.3) !important;
+          animation: forge-tut-target-pulse 2s ease-in-out infinite !important;
+          z-index: 100001 !important;
+        }
+        @keyframes forge-tut-target-pulse {
+          0%, 100% {
+            box-shadow: 0 0 15px var(--accent-primary, #e5a93b), inset 0 0 5px rgba(229,169,59,0.2) !important;
+          }
+          50% {
+            box-shadow: 0 0 35px var(--accent-primary, #e5a93b), inset 0 0 15px rgba(229,169,59,0.5) !important;
+          }
+        }
         #forge-tut-header {
           display: flex;
           align-items: center;
@@ -406,6 +421,10 @@ class SpotlightTutorial {
   stop(preserveState = false) {
     this.clearTaskPolling();
     this.isActive = false;
+    if (this.lastTargetEl) {
+      this.lastTargetEl.classList.remove('forge-tut-highlighted-target');
+      this.lastTargetEl = null;
+    }
     document.body.classList.remove('tut-restrict-phase2');
     this.overlay.style.opacity = '0';
     this.overlay.style.pointerEvents = 'none';
@@ -552,6 +571,12 @@ class SpotlightTutorial {
       if (step.onEnter) step.onEnter();
     }
 
+    // Clear previous target highlight
+    if (this.lastTargetEl) {
+      this.lastTargetEl.classList.remove('forge-tut-highlighted-target');
+      this.lastTargetEl = null;
+    }
+
     // Position spotlight
     if (step.target) {
       let targetEl = null;
@@ -566,6 +591,18 @@ class SpotlightTutorial {
         targetEl = document.querySelector(targetEl);
       }
       if (targetEl) {
+        // Expose target element reference for cleaning up later
+        this.lastTargetEl = targetEl;
+        targetEl.classList.add('forge-tut-highlighted-target');
+
+        // Center canvas view on target element if it is a canvas node
+        if (window.canvasState && typeof window.panToNode === 'function') {
+          const entry = window.canvasState.nodes.find(n => n.el === targetEl || n.el.contains(targetEl));
+          if (entry) {
+            window.panToNode(entry);
+          }
+        }
+
         targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         setTimeout(() => {
           const rect = targetEl.getBoundingClientRect();
