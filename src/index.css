@@ -1215,19 +1215,8 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
 }
 
-/* Layer 3: Drifting radial nebula glow */
-#main-content::after {
-  content: '';
-  position: absolute;
-  top: -20%;
-  left: 15%;
-  width: 70%;
-  height: 70%;
-  background: radial-gradient(ellipse 100% 50% at 50% 50%, var(--accent-primary-dim, rgba(56, 120, 160, 0.08)) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-  animation: atmosphereDrift 20s ease-in-out infinite alternate;
-}
+/* Layer 3: (removed accent nebula — was causing visible accent-colored box) */
+
 
 /* Floating Ambient Orbs for V2.0 Depth */
 .ambient-orb {
@@ -1242,7 +1231,7 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
 .orb-primary {
   width: 450px;
   height: 450px;
-  background: radial-gradient(circle, var(--accent-primary, #e5a93b) 0%, transparent 80%);
+  background: radial-gradient(circle, rgba(56, 80, 140, 0.18) 0%, transparent 80%);
   top: 15%;
   left: 20%;
   animation: floatOrb1 25s ease-in-out infinite alternate;
@@ -1250,7 +1239,7 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
 .orb-secondary {
   width: 350px;
   height: 350px;
-  background: radial-gradient(circle, var(--accent-primary-hover, var(--accent-primary)) 0%, transparent 80%);
+  background: radial-gradient(circle, rgba(30, 50, 100, 0.14) 0%, transparent 80%);
   bottom: 20%;
   right: 15%;
   animation: floatOrb2 30s ease-in-out infinite alternate;

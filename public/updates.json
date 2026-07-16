@@ -1,5 +1,18 @@
 [
   {
+    "version": "v0.2.1-alpha",
+    "date": "2026-07-16",
+    "title": "Character Codex, Gallery Animations & Visual Fixes",
+    "type": "patch",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.2.1-alpha/Forge-Setup-0.2.1-alpha.exe",
+    "changes": [
+      "Removed the accent-colored highlight box visible at the top of every page",
+      "D&D style: renamed NPC Codex to Character Codex with merged story + TTRPG fields (Role, Species, Class, Status, Alignment, CR, Tags)",
+      "Gallery card hover: smooth lift, scale, accent glow border, and cover image zoom animation",
+      "Fixed theme persistence: theme selections now correctly saved and restored across sessions"
+    ]
+  },
+  {
     "version": "v0.2.0-alpha",
     "date": "2026-07-16",
     "title": "Forge V2.0 - Cinematic Rewrite & Desktop Windows Support",
