@@ -1339,9 +1339,9 @@ export function initAiDrawer() {
   drawerEl.id = 'ai-drawer';
   drawerEl.innerHTML = `
     <!-- Header -->
-    <div class="ai-drawer-header">
+    <div class="ai-drawer-header" style="border-bottom: none; padding-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="color: var(--accent-primary); filter: drop-shadow(0 0 5px rgba(229,169,59,0.3)); font-size: 1.2rem; display: flex; align-items: center;">
+        <span style="color: var(--accent-amber, #f59e0b); filter: drop-shadow(0 0 5px rgba(245,158,11,0.35)); font-size: 1.2rem; display: flex; align-items: center;">
           <i data-lucide="zap"></i>
         </span>
         <div>
@@ -1350,6 +1350,12 @@ export function initAiDrawer() {
         </div>
       </div>
       <button id="ai-drawer-close" class="icon-btn" style="color: var(--text-muted); padding: 4px; border-radius: 4px; font-size: 1rem;">✕</button>
+    </div>
+
+    <!-- Mode Toggle: Chat Mode vs Scene Mode -->
+    <div class="ai-drawer-mode-tabs" style="display: flex; padding: 3px; background: rgba(0,0,0,0.35); border-radius: 8px; margin: 0 16px 12px; border: 1px solid var(--border-subtle); gap: 4px;">
+      <button id="ai-mode-chat-btn" class="active" style="flex: 1; background: rgba(255,255,255,0.08); border: none; color: #fff; font-size: 10px; font-weight: 600; padding: 6px; border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-hud);">💬 Chat</button>
+      <button id="ai-mode-scene-btn" style="flex: 1; background: transparent; border: none; color: var(--text-secondary); font-size: 10px; font-weight: 600; padding: 6px; border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-hud);">🎬 Scene Mode</button>
     </div>
 
     <!-- Messages Container -->
@@ -1380,6 +1386,14 @@ export function initAiDrawer() {
   // Close handlers
   drawerEl.querySelector('#ai-drawer-close').addEventListener('click', () => {
     toggleAiDrawer(false);
+  });
+
+  // Mode switcher
+  drawerEl.querySelector('#ai-mode-scene-btn').addEventListener('click', () => {
+    import('./sceneMode.js').then(({ toggleSceneMode }) => {
+      toggleAiDrawer(false);
+      toggleSceneMode(true);
+    });
   });
 
   // Textarea Enter key and send button

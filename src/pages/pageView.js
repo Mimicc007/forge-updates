@@ -3,11 +3,12 @@
    Notion-style document editor for pages (schema entries or standalone docs).
    ============================================================ */
 
-import { getPage, savePage, getSchema, deletePage, getBacklinks, getSchemas } from '../db.js';
+import { getPage, savePage, getSchema, deletePage, getBacklinks, getSchemas, getPagesBySchema } from '../db.js';
 import { refreshIcons } from '../main.js';
 import { navigate } from '../router.js';
-import { showToast, showConfirm, createEditor } from '../ui.js';
+import { showToast, showConfirm, createEditor, timeAgo } from '../ui.js';
 import { initMapEditor } from '../mapEditor.js';
+import { refreshSidebarLists } from '../sidebar.js';
 
 export async function renderPageView(container, params) {
   const pageId = params.id;
@@ -32,54 +33,160 @@ export async function renderPageView(container, params) {
 
   // Load schema if this page belongs to one
   let schema = null;
+  let characters = [];
   if (page.schemaId) {
     schema = await getSchema(page.schemaId);
+    if (schema && schema.fields && schema.fields.some(f => f.isDynamicCharacters)) {
+      const projectSchemas = await getSchemas(page.projectId);
+      const matchingSchemas = projectSchemas.filter(s => {
+        const id = (s.id || '').toLowerCase();
+        const name = (s.name || '').toLowerCase();
+        if (['story-chars-schema', 'dnd-npcs-schema', 'dnd-monsters-schema', 'gamedev-units-schema'].includes(id)) {
+          return true;
+        }
+        const keywords = ['character', 'npc', 'monster', 'enemy', 'boss', 'unit', 'foe', 'hero'];
+        return keywords.some(kw => name.includes(kw));
+      });
+
+      let charPages = [];
+      for (const s of matchingSchemas) {
+        const pages = await getPagesBySchema(s.id);
+        charPages.push(...pages);
+      }
+
+      if (charPages.length === 0) {
+        charPages = await getPagesBySchema('story-chars-schema');
+      }
+
+      const seen = new Set();
+      characters = charPages.filter(p => {
+        const title = p.title || 'Untitled';
+        if (seen.has(title)) return false;
+        seen.add(title);
+        return true;
+      });
+    }
   }
 
   const isMapPage = ['dnd-maps-schema', 'story-maps-schema', 'story-locs-schema', 'locations'].includes(page.schemaId) || (schema && ['dnd-maps-schema', 'story-maps-schema', 'story-locs-schema', 'locations'].includes(schema.templateId));
 
   // Build the page wrapper
   container.innerHTML = `
-    <div class="page-view-wrapper" style="max-width: 860px; margin: 0 auto; padding: var(--sp-10) var(--sp-8) var(--sp-16); position: relative;">
+    <style>
+      #pv-title[data-placeholder]:empty::before {
+        content: attr(data-placeholder);
+        color: var(--text-muted);
+        pointer-events: none;
+      }
+      #pv-title {
+        caret-color: var(--accent-primary);
+        border-bottom: 2px solid transparent;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        padding-bottom: 8px;
+      }
+      #pv-title:focus {
+        border-color: var(--accent-primary-dim);
+        box-shadow: 0 4px 12px -4px var(--accent-primary-glow);
+      }
+      .pv-cover-area:hover #pv-cover-overlay {
+        opacity: 1 !important;
+      }
+      .pv-cover-area:hover {
+        border-color: var(--accent-primary-dim) !important;
+        box-shadow: 0 0 20px -5px var(--accent-primary-glow) !important;
+      }
+      #pv-icon-area:hover {
+        transform: scale(1.06) translateY(-2px);
+        border-color: var(--accent-primary) !important;
+        box-shadow: var(--shadow-xl), 0 0 20px var(--accent-primary-dim) !important;
+      }
+      #pv-icon-area:hover #pv-icon-graphic {
+        transform: rotate(6deg) scale(1.1);
+      }
+      .pv-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .pv-meta-item i {
+        width: 13px;
+        height: 13px;
+        color: var(--accent-primary);
+        opacity: 0.8;
+      }
+    </style>
+    <div class="page-view-wrapper" style="position: relative;">
       
-      <!-- Top bar: back + delete -->
+      <!-- Top bar: breadcrumbs + actions -->
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-8);">
-        <button id="pv-back-btn" class="btn btn-secondary btn-sm" style="gap: 6px;">
-          <i data-lucide="arrow-left" style="width:14px;height:14px;"></i>
-          ${schema ? `Back to ${schema.name}` : 'Back'}
-        </button>
+        <div class="breadcrumb" style="margin-bottom: 0;">
+          <div class="breadcrumb-item" id="pv-bread-root" title="Go to Dashboard">
+            <i data-lucide="home" style="width:12px;height:12px;"></i>
+            Dashboard
+          </div>
+          ${schema ? `
+            <span class="breadcrumb-sep">›</span>
+            <div class="breadcrumb-item" id="pv-bread-schema" title="Go to ${schema.name} Database">
+              <i data-lucide="${schema.icon || 'database'}" style="width:12px;height:12px;"></i>
+              ${escHtml(schema.name)}
+            </div>
+          ` : ''}
+          <span class="breadcrumb-sep">›</span>
+          <div class="breadcrumb-item active" id="pv-bread-current">${escHtml(page.title || 'Untitled')}</div>
+        </div>
+
         <div style="display: flex; gap: 8px; align-items: center;">
-          <span id="pv-save-status" style="font-size: var(--fs-xs); color: var(--text-muted); opacity: 0; transition: opacity 0.3s;">Saved</span>
-          <button id="pv-delete-btn" class="btn btn-sm" style="color: var(--color-danger, #f43f5e); background: transparent; border-color: rgba(244,63,94,0.3);">
-            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+          <!-- Autosave Indicator -->
+          <div class="autosave-indicator saved" id="pv-save-status" style="opacity: 0; transition: opacity 0.3s; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="check" style="width:12px;height:12px;color:var(--accent-green);"></i>
+            <span>Saved</span>
+          </div>
+
+          <!-- Focus & Typewriter toggles -->
+          <button id="pv-focus-btn" class="btn btn-secondary btn-icon" title="Toggle Focus Mode (Ctrl+Shift+F)">
+            <i data-lucide="maximize-2"></i>
+          </button>
+          <button id="pv-typewriter-btn" class="btn btn-secondary btn-icon" title="Toggle Typewriter Mode (Ctrl+Shift+T)">
+            <i data-lucide="heading"></i>
+          </button>
+
+          <!-- Properties slide-in panel toggle -->
+          ${schema && schema.fields && schema.fields.length > 0 ? `
+            <button id="pv-props-btn" class="btn btn-secondary btn-icon" title="Document Properties">
+              <i data-lucide="sliders-horizontal"></i>
+            </button>
+          ` : ''}
+
+          <button id="pv-delete-btn" class="btn btn-secondary btn-icon" style="color: var(--accent-red); border-color: transparent;" title="Delete Page">
+            <i data-lucide="trash-2"></i>
           </button>
         </div>
       </div>
 
-      <!-- Cover image + icon row -->
-      <div style="display: flex; align-items: flex-end; gap: var(--sp-4); margin-bottom: var(--sp-4);">
-        <!-- Page icon -->
-        <div id="pv-icon-area" style="cursor: pointer; flex-shrink: 0;" title="Click to change icon">
-          <i data-lucide="${page.icon || 'file-text'}" style="width: 52px; height: 52px; color: var(--accent-primary); opacity: 0.85;"></i>
-        </div>
-
+      <!-- Overlapping Cover & Icon Header Section -->
+      <div class="pv-header-container" style="position: relative; margin-bottom: 50px; border-radius: 16px; overflow: visible;">
+        <!-- Cover Image area -->
         ${!isMapPage ? `
-          <!-- Cover image upload -->
-          <div id="pv-cover-area" style="position: relative; cursor: pointer;" title="Upload cover image">
+          <div id="pv-cover-area" class="pv-cover-area" style="position: relative; width: 100%; height: 200px; border-radius: 16px; overflow: hidden; cursor: pointer; transition: all 0.3s var(--easing-out-expo); background: rgba(255, 255, 255, 0.01); border: 1px solid var(--border-subtle);">
             ${page.coverImage ? `
-              <img id="pv-cover-img" src="${page.coverImage}" alt="Cover" style="width: 120px; height: 80px; border-radius: 10px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); display: block;">
-              <div id="pv-cover-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); border-radius: 10px; opacity: 0; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s; font-size: 0.7rem; color: #fff; gap: 4px;">
-                <i data-lucide="image" style="width:12px;height:12px;"></i> Change
+              <img id="pv-cover-img" src="${page.coverImage}" alt="Cover" style="width: 100%; height: 100%; object-fit: cover; display: block; transition: filter 0.3s;">
+              <div id="pv-cover-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.45); opacity: 0; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; font-size: 0.85rem; color: #fff; font-family: var(--font-heading); font-weight: 600; gap: 8px;">
+                <i data-lucide="image" style="width:16px;height:16px;"></i> Change Cover Image
               </div>
             ` : `
-              <div id="pv-cover-placeholder" style="width: 120px; height: 80px; border-radius: 10px; border: 1.5px dashed rgba(255,255,255,0.12); background: rgba(255,255,255,0.02); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: border-color 0.15s, background 0.15s;">
-                <i data-lucide="image-plus" style="width:16px;height:16px;color:var(--text-muted);"></i>
-                <span style="font-size: 0.62rem; color: var(--text-muted);">Cover image</span>
+              <div id="pv-cover-placeholder" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s; border: 1.5px dashed rgba(255,255,255,0.12); border-radius: 16px; background: rgba(255,255,255,0.02);">
+                <i data-lucide="image-plus" style="width:24px;height:24px;color:var(--text-muted); opacity: 0.6;"></i>
+                <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-hud);">Add Cover Image Preset or Upload</span>
               </div>
             `}
             <input type="file" id="pv-cover-input" accept="image/*" style="display:none;">
           </div>
         ` : ''}
+
+        <!-- Overlapping Page Icon Area -->
+        <div id="pv-icon-area" style="position: absolute; bottom: -28px; left: 28px; z-index: 10; cursor: pointer; width: 68px; height: 68px; border-radius: 18px; background: var(--bg-deep); border: 2px solid var(--border-strong); box-shadow: var(--shadow-lg), 0 0 15px var(--accent-primary-dim); display: flex; align-items: center; justify-content: center; transition: all 0.25s var(--easing-out-expo);" title="Click to change icon">
+          <i id="pv-icon-graphic" data-lucide="${page.icon || 'file-text'}" style="width: 32px; height: 32px; color: var(--accent-primary); transition: transform 0.25s var(--easing-out-expo);"></i>
+        </div>
       </div>
 
       ${isMapPage ? `
@@ -101,25 +208,17 @@ export async function renderPageView(container, params) {
         contenteditable="true"
         spellcheck="false"
         data-placeholder="Untitled"
-        style="font-size: 2.5rem; font-weight: 700; color: var(--text-primary); outline: none; margin-bottom: var(--sp-6); min-height: 1.2em; empty-cells: show; word-break: break-word;"
+        style="font-size: 2.5rem; font-weight: 700; color: var(--text-primary); outline: none; margin-bottom: 12px; min-height: 1.2em; empty-cells: show; word-break: break-word; margin-top: 16px;"
       >${escHtml(page.title || '')}</div>
 
-      <!-- Properties (if schema attached) -->
-      ${schema && schema.fields && schema.fields.length > 0 ? `
-      <div id="pv-properties" style="display: flex; flex-direction: column; gap: 0; margin-bottom: var(--sp-8); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden;">
-        ${schema.fields.map(field => `
-          <div class="pv-property-row" style="display: grid; grid-template-columns: 160px 1fr; border-bottom: 1px solid var(--border-subtle);">
-            <div style="padding: var(--sp-3) var(--sp-4); font-size: var(--fs-sm); color: var(--text-secondary); display: flex; align-items: center; gap: var(--sp-2); background: rgba(255,255,255,0.02);">
-              <i data-lucide="${fieldIcon(field.type)}" style="width: 13px; height: 13px; flex-shrink: 0;"></i>
-              ${escHtml(field.name)}
-            </div>
-            <div style="padding: var(--sp-2) var(--sp-3);">
-              ${renderPropertyInput(field, page.properties[field.id] || '')}
-            </div>
-          </div>
-        `).join('')}
+      <!-- Info/Stats row below title -->
+      <div style="display: flex; align-items: center; gap: 16px; font-size: var(--fs-xs); color: var(--text-muted); margin-bottom: 28px; font-family: var(--font-hud); flex-wrap: wrap;">
+        <span class="pv-meta-item"><i data-lucide="book-open"></i> <span id="pv-word-count-val">0 words</span></span>
+        <span style="opacity: 0.4;">·</span>
+        <span class="pv-meta-item"><i data-lucide="clock"></i> <span id="pv-read-time-val">0 min read</span></span>
+        <span style="opacity: 0.4;">·</span>
+        <span class="pv-meta-item"><i data-lucide="calendar"></i> <span>Edited ${timeAgo(page.updatedAt)}</span></span>
       </div>
-      ` : ''}
 
       <!-- Divider -->
       <div style="height: 1px; background: var(--border-subtle); margin-bottom: var(--sp-8);"></div>
@@ -139,9 +238,140 @@ export async function renderPageView(container, params) {
       </div>
 
     </div>
+
+    <!-- Properties Slide-In Panel — premium redesign -->
+    ${schema && schema.fields && schema.fields.length > 0 ? `
+    <div id="pv-props-panel" class="props-panel">
+      <div class="props-panel-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:28px; height:28px; border-radius:8px; background:rgba(229,169,59,0.12); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <i data-lucide="sliders-horizontal" style="width:14px; height:14px; color:var(--accent-primary);"></i>
+          </div>
+          <div>
+            <div class="props-panel-title">Metadata</div>
+            <div style="font-size:0.6rem; color:var(--text-muted); font-family:var(--font-hud); letter-spacing:0.05em;">${schema.fields.length} field${schema.fields.length !== 1 ? 's' : ''}</div>
+          </div>
+        </div>
+        <button id="pv-props-close" class="btn-icon" title="Close Panel" style="width:28px;height:28px;border-radius:8px;"><i data-lucide="x" style="width: 13px; height: 13px;"></i></button>
+      </div>
+      <div class="props-panel-body">
+        ${schema.fields.map(field => `
+          <div class="props-field-card">
+            <div class="prop-field-label">
+              <i data-lucide="${fieldIcon(field.type)}" style="width: 11px; height: 11px; color: var(--accent-primary); opacity:0.8;"></i>
+              <span>${escHtml(field.name)}</span>
+            </div>
+            <div class="prop-field-value">
+              ${renderPropertyInput(field, page.properties[field.id] || '', characters)}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
+  
   `;
 
   refreshIcons();
+
+  // ── Word Count & Reading Time calculation ───────────────────────────────────
+  const updateStats = () => {
+    if (!editor || !editor.quill) return;
+    const text = editor.quill.getText() || '';
+    const cleanText = text.trim();
+    const words = cleanText ? cleanText.split(/\s+/).filter(Boolean).length : 0;
+    
+    // Estimate reading time: average adult reads ~200-250 wpm
+    const readTime = Math.max(1, Math.ceil(words / 200));
+
+    const wordCountEl = container.querySelector('#pv-word-count-val');
+    const readTimeEl = container.querySelector('#pv-read-time-val');
+    
+    if (wordCountEl) wordCountEl.textContent = `${words} word${words !== 1 ? 's' : ''}`;
+    if (readTimeEl) readTimeEl.textContent = `${readTime} min${readTime !== 1 ? 's' : ''} read`;
+  };
+
+  // ── Page Icon Picker Modal ────────────────────────────────────────────────
+  const iconArea = container.querySelector('#pv-icon-area');
+  if (iconArea) {
+    iconArea.addEventListener('click', () => {
+      const modalId = 'pv-icon-picker-modal';
+      const existing = document.getElementById(modalId);
+      if (existing) existing.remove();
+
+      const modal = document.createElement('div');
+      modal.id = modalId;
+      modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(5, 4, 8, 0.75); backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px); display: flex; align-items: center;
+        justify-content: center; z-index: 10100;
+      `;
+
+      // Icons options list
+      const iconsList = [
+        'feather', 'book', 'book-open', 'scroll', 'sword', 'shield', 'gem', 
+        'crown', 'compass', 'award', 'heart', 'flame', 'map-pin', 'map', 
+        'activity', 'sparkles', 'zap', 'key', 'castle', 'skull', 
+        'file-text', 'glasses', 'coffee', 'pen-tool'
+      ];
+
+      modal.innerHTML = `
+        <div class="card" style="width: 100%; max-width: 420px; padding: var(--sp-6); background: rgba(20, 17, 34, 0.96); border: 1px solid rgba(229, 169, 59, 0.25); box-shadow: var(--shadow-2xl); border-radius: var(--radius-lg); animation: scaleIn 0.2s ease-out;">
+          <h3 style="color: #fff; margin-top: 0; margin-bottom: 16px; font-family: var(--font-heading); font-size: 1.15rem; display:flex; align-items:center; gap:8px;">
+            <i data-lucide="sparkles" style="color: var(--accent-primary); width: 18px; height: 18px;"></i>
+            <span>Select Page Icon</span>
+          </h3>
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px;">
+            ${iconsList.map(iconName => `
+              <button class="icon-option-btn btn-secondary" data-icon="${iconName}" style="width: 54px; height: 54px; display: flex; align-items: center; justify-content: center; border-radius: 12px; cursor: pointer; transition: all 0.15s; background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); padding: 0;">
+                <i data-lucide="${iconName}" style="width: 22px; height: 22px; color: var(--text-secondary);"></i>
+              </button>
+            `).join('')}
+          </div>
+          <div style="display: flex; justify-content: flex-end;">
+            <button class="btn btn-ghost" id="pv-icon-cancel" style="font-family: var(--font-hud);">Cancel</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+      refreshIcons();
+
+      // Hook up options
+      modal.querySelectorAll('.icon-option-btn').forEach(btn => {
+        btn.style.transition = 'all 0.15s ease-in-out';
+        btn.addEventListener('mouseenter', () => {
+          btn.style.transform = 'scale(1.08)';
+          btn.style.borderColor = 'var(--accent-primary)';
+          btn.style.background = 'var(--accent-primary-dim)';
+        });
+        btn.addEventListener('mouseleave', () => {
+          btn.style.transform = '';
+          btn.style.borderColor = '';
+          btn.style.background = '';
+        });
+        btn.addEventListener('click', async () => {
+          const selected = btn.dataset.icon;
+          page.icon = selected;
+          await savePage(page);
+          
+          // Update visual immediately
+          const graphic = container.querySelector('#pv-icon-graphic');
+          if (graphic) {
+            graphic.setAttribute('data-lucide', selected);
+            refreshIcons();
+          }
+          modal.remove();
+          showToast('Icon updated!', 'success');
+          // Also refresh sidebar lists to propagate icon change
+          await refreshSidebarLists();
+        });
+      });
+
+      modal.querySelector('#pv-icon-cancel').addEventListener('click', () => modal.remove());
+    });
+  }
 
   // ── Cover image upload ───────────────────────────────────────────────────
   const coverArea = container.querySelector('#pv-cover-area');
@@ -183,14 +413,14 @@ export async function renderPageView(container, params) {
         if (existing) {
           existing.src = page.coverImage;
         } else {
-          // Replace placeholder with image
+          // Replace placeholder with correctly-sized full-bleed image
           const placeholder = container.querySelector('#pv-cover-placeholder');
           if (placeholder) {
             placeholder.outerHTML = `
               <img id="pv-cover-img" src="${page.coverImage}" alt="Cover"
-                style="width: 120px; height: 80px; border-radius: 10px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); display: block;">
-              <div id="pv-cover-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); border-radius: 10px; opacity: 0; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s; font-size: 0.7rem; color: #fff; gap: 4px;">
-                <i data-lucide="image" style="width:12px;height:12px;"></i> Change
+                style="width: 100%; height: 100%; object-fit: cover; display: block; transition: filter 0.3s;">
+              <div id="pv-cover-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.45); opacity: 0; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; font-size: 0.85rem; color: #fff; font-family: var(--font-heading); font-weight: 600; gap: 8px;">
+                <i data-lucide="image" style="width:16px;height:16px;"></i> Change Cover Image
               </div>`;
             refreshIcons();
             const newOverlay = container.querySelector('#pv-cover-overlay');
@@ -209,15 +439,28 @@ export async function renderPageView(container, params) {
   const saveStatus = container.querySelector('#pv-save-status');
   let saveTimer;
 
-  const flashSaved = () => {
+  const showSaving = () => {
+    if (!saveStatus) return;
+    saveStatus.className = 'autosave-indicator saving';
+    saveStatus.innerHTML = '<i data-lucide="loader" style="width:12px;height:12px;"></i><span>Saving...</span>';
     saveStatus.style.opacity = '1';
+    refreshIcons();
+  };
+
+  const flashSaved = () => {
+    if (!saveStatus) return;
+    saveStatus.className = 'autosave-indicator saved';
+    saveStatus.innerHTML = '<i data-lucide="check" style="width:12px;height:12px;color:var(--accent-green);"></i><span>Saved</span>';
+    saveStatus.style.opacity = '1';
+    refreshIcons();
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => { saveStatus.style.opacity = '0'; }, 1800);
+    saveTimer = setTimeout(() => { if (saveStatus) saveStatus.style.opacity = '0'; }, 2000);
   };
 
   // ── Auto-save ────────────────────────────────────────────────────────────
   let autoSaveTimer;
   const triggerSave = () => {
+    showSaving();
     clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(async () => {
       // Title
@@ -228,6 +471,20 @@ export async function renderPageView(container, params) {
       container.querySelectorAll('[data-prop-field]').forEach(input => {
         page.properties[input.dataset.propField] = input.value;
       });
+
+      // Sync Primary/Secondary POV characters to characters list
+      if (page.isStoryBeat || page.schemaId === 'story-chapters-schema') {
+        const charIds = new Set(page.properties.characters || []);
+        if (page.properties.f4) {
+          const charPage = characters.find(c => (c.title || 'Untitled') === page.properties.f4);
+          if (charPage) charIds.add(charPage.id);
+        }
+        if (page.properties.f5) {
+          const charPage = characters.find(c => (c.title || 'Untitled') === page.properties.f5);
+          if (charPage) charIds.add(charPage.id);
+        }
+        page.properties.characters = Array.from(charIds);
+      }
 
       // Editor content
       if (editor) {
@@ -250,6 +507,20 @@ export async function renderPageView(container, params) {
       container.querySelectorAll('[data-prop-field]').forEach(input => {
         page.properties[input.dataset.propField] = input.value;
       });
+
+      // Sync Primary/Secondary POV characters to characters list
+      if (page.isStoryBeat || page.schemaId === 'story-chapters-schema') {
+        const charIds = new Set(page.properties.characters || []);
+        if (page.properties.f4) {
+          const charPage = characters.find(c => (c.title || 'Untitled') === page.properties.f4);
+          if (charPage) charIds.add(charPage.id);
+        }
+        if (page.properties.f5) {
+          const charPage = characters.find(c => (c.title || 'Untitled') === page.properties.f5);
+          if (charPage) charIds.add(charPage.id);
+        }
+        page.properties.characters = Array.from(charIds);
+      }
 
       if (editor) {
         page.content = editor.getContent();
@@ -297,6 +568,38 @@ export async function renderPageView(container, params) {
   container.querySelectorAll('[data-prop-field]').forEach(input => {
     input.addEventListener('input', () => triggerSave());
   });
+
+  // Handle dynamic dropdown exclusions for Primary/Secondary POV
+  const dynamicSelects = Array.from(container.querySelectorAll('select[data-prop-field]')).filter(select => {
+    const fieldId = select.dataset.propField;
+    const field = schema?.fields?.find(f => f.id === fieldId);
+    return field && field.isDynamicCharacters;
+  });
+
+  const updateDynamicOptions = () => {
+    const selectedValues = dynamicSelects.map(s => s.value).filter(Boolean);
+    dynamicSelects.forEach(select => {
+      const currentVal = select.value;
+      const options = select.querySelectorAll('option');
+      options.forEach(opt => {
+        if (!opt.value) return; // Skip empty option
+        const isSelectedElsewhere = selectedValues.includes(opt.value) && opt.value !== currentVal;
+        opt.disabled = isSelectedElsewhere;
+        opt.hidden = isSelectedElsewhere;
+        opt.style.display = isSelectedElsewhere ? 'none' : '';
+      });
+    });
+  };
+
+  if (dynamicSelects.length > 0) {
+    dynamicSelects.forEach(select => {
+      select.addEventListener('change', () => {
+        updateDynamicOptions();
+        triggerSave();
+      });
+    });
+    updateDynamicOptions();
+  }
 
   // ── Visual Tag Event Handlers ──────────────────────────────────────────────
   container.querySelectorAll('.pv-tags-container').forEach(tagsContainer => {
@@ -385,8 +688,12 @@ export async function renderPageView(container, params) {
     initialContent: page.content || ''
   });
 
+  // Calculate initial page stats
+  setTimeout(updateStats, 100);
+
   editor.quill.on('text-change', () => {
     triggerSave();
+    updateStats();
   });
 
   // ── Initialize Map Editor (if map page schema) ──
@@ -436,18 +743,41 @@ export async function renderPageView(container, params) {
     }
   }
 
-  // ── Back button ────────────────────────────────────────────────────────────
-  const backBtn = container.querySelector('#pv-back-btn');
-  if (backBtn) {
-    backBtn.addEventListener('click', async () => {
-      // Force immediate save of everything before navigating
+  // ── Breadcrumbs ────────────────────────────────────────────────────────────
+  const breadRoot = container.querySelector('#pv-bread-root');
+  if (breadRoot) {
+    breadRoot.addEventListener('click', async () => {
       await flushSave();
-      
-      if (schema) {
-        navigate(`schema/${schema.id}`);
-      } else {
-        history.length > 1 ? history.back() : navigate('dashboard');
-      }
+      navigate('dashboard');
+    });
+  }
+  const breadSchema = container.querySelector('#pv-bread-schema');
+  if (breadSchema) {
+    breadSchema.addEventListener('click', async () => {
+      await flushSave();
+      navigate(`schema/${schema.id}`);
+    });
+  }
+
+  // ── Properties Panel Toggle ────────────────────────────────────────────────
+  const propsBtn = container.querySelector('#pv-props-btn');
+  const propsPanel = container.querySelector('#pv-props-panel');
+  const propsClose = container.querySelector('#pv-props-close');
+  const wrapper = container.querySelector('.page-view-wrapper');
+
+  if (propsBtn && propsPanel) {
+    propsBtn.addEventListener('click', () => {
+      const isOpen = propsPanel.classList.toggle('open');
+      propsBtn.classList.toggle('active', isOpen);
+      if (wrapper) wrapper.classList.toggle('props-open', isOpen);
+    });
+  }
+
+  if (propsClose && propsPanel) {
+    propsClose.addEventListener('click', () => {
+      propsPanel.classList.remove('open');
+      if (propsBtn) propsBtn.classList.remove('active');
+      if (wrapper) wrapper.classList.remove('props-open');
     });
   }
 
@@ -475,7 +805,7 @@ export async function renderPageView(container, params) {
 
     try {
       const backlinks = await getBacklinks(page.id);
-      countEl.textContent = backlinks.length;
+      if (countEl) countEl.textContent = backlinks.length > 0 ? `(${backlinks.length})` : '(0)';
       listEl.innerHTML = '';
 
       if (backlinks.length === 0) {
@@ -483,58 +813,44 @@ export async function renderPageView(container, params) {
         return;
       }
 
-      // Fetch all schemas to map colors
-      const allSchemas = await getSchemas(page.projectId);
-
       for (const link of backlinks) {
         const srcPage = await getPage(link.sourceId);
         if (!srcPage) continue;
 
-        const srcSchema = srcPage.schemaId ? await getSchema(srcPage.schemaId) : null;
-        let schemaColor = '#a8a29e';
-        let schemaName = 'Standalone';
-
-        if (srcSchema) {
-          schemaName = srcSchema.name;
-          const idx = allSchemas.findIndex(s => s.id === srcSchema.id);
-          const colors = ['#f43f5e', '#a855f7', '#3b82f6', '#10b981', '#e5a93b', '#06b6d4', '#ec4899', '#f97316'];
-          schemaColor = colors[idx !== -1 ? idx % colors.length : 0];
+        let snippet = 'No text content.';
+        if (srcPage.content) {
+          if (srcPage.content.startsWith('{')) {
+            try {
+              const delta = JSON.parse(srcPage.content);
+              if (delta.ops) {
+                snippet = delta.ops.map(op => typeof op.insert === 'string' ? op.insert : '').join('').trim();
+              }
+            } catch (_) {}
+          } else {
+            snippet = srcPage.content;
+          }
         }
+        const truncatedExcerpt = snippet.length > 90 ? snippet.slice(0, 90) + '...' : snippet || 'No text content.';
 
-        const card = document.createElement('div');
-        card.className = 'backlink-card';
-        card.style.cssText = `
-          padding: var(--sp-2.5) var(--sp-3.5);
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid var(--border-subtle);
-          border-left: 3px solid ${schemaColor};
-          border-radius: var(--radius-md);
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        `;
-        card.onmouseenter = () => {
-          card.style.background = 'rgba(255, 255, 255, 0.04)';
-          card.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-        };
-        card.onmouseleave = () => {
-          card.style.background = 'rgba(255, 255, 255, 0.02)';
-          card.style.borderColor = 'var(--border-subtle)';
-        };
-
-        card.innerHTML = `
-          <div style="font-size: 8px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">${escHtml(schemaName)}</div>
-          <span style="font-weight: var(--fw-medium); color: var(--text-primary); font-size: var(--fs-xs);">${escHtml(srcPage.title || 'Untitled')}</span>
+        const item = document.createElement('div');
+        item.className = 'backlink-item';
+        item.innerHTML = `
+          <div class="backlink-icon">
+            <i data-lucide="${srcPage.icon || 'file-text'}" style="width: 14px; height: 14px;"></i>
+          </div>
+          <div class="backlink-content">
+            <div class="backlink-title">${escHtml(srcPage.title || 'Untitled')}</div>
+            <div class="backlink-excerpt">${escHtml(truncatedExcerpt)}</div>
+          </div>
         `;
 
-        card.addEventListener('click', () => {
+        item.addEventListener('click', () => {
           navigate(`page/${srcPage.id}`);
         });
 
-        listEl.appendChild(card);
+        listEl.appendChild(item);
       }
+      refreshIcons();
     } catch (err) {
       console.error('Failed to load backlinks:', err);
     }
@@ -663,11 +979,235 @@ export async function renderPageView(container, params) {
     }
   });
 
+  // ── Floating Format Toolbar (Selection Change) ──────────────────────────────
+  let bubbleToolbar = null;
+  
+  const removeBubble = () => {
+    if (bubbleToolbar) {
+      bubbleToolbar.remove();
+      bubbleToolbar = null;
+    }
+  };
+  
+  const showBubble = (selection) => {
+    removeBubble();
+    if (!selection || selection.isCollapsed) return;
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0) return;
+    
+    // Only show if selection is inside our editor
+    const editorEl = container.querySelector('.ql-editor');
+    if (!editorEl || !editorEl.contains(range.commonAncestorContainer)) return;
+    
+    bubbleToolbar = document.createElement('div');
+    bubbleToolbar.className = 'bubble-toolbar animate-scale-in';
+    bubbleToolbar.innerHTML = `
+      <button title="Bold" data-cmd="bold"><b>B</b></button>
+      <button title="Italic" data-cmd="italic"><i>I</i></button>
+      <button title="Underline" data-cmd="underline"><u>U</u></button>
+      <div class="bubble-sep"></div>
+      <button title="Heading 1" data-cmd="heading1">H1</button>
+      <button title="Heading 2" data-cmd="heading2">H2</button>
+      <div class="bubble-sep"></div>
+      <button title="Quote" data-cmd="blockquote">❝</button>
+      <button title="Code" data-cmd="code">{ }</button>
+    `;
+    
+    const scrollY = window.scrollY || document.documentElement.scrollTop;
+    const left = Math.max(8, Math.min(rect.left + rect.width / 2 - 130, window.innerWidth - 268));
+    const top = rect.top + scrollY - 46;
+    bubbleToolbar.style.cssText = `left: ${left}px; top: ${top}px;`;
+    document.body.appendChild(bubbleToolbar);
+    refreshIcons();
+    
+    // Format button click handlers
+    bubbleToolbar.querySelectorAll('[data-cmd]').forEach(btn => {
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Prevent losing focus/selection
+        if (!editor || !editor.quill) return;
+        const cmd = btn.dataset.cmd;
+        const q = editor.quill;
+        const sel = q.getSelection();
+        if (!sel) return;
+        
+        if (cmd === 'bold') q.format('bold', !q.getFormat(sel).bold);
+        else if (cmd === 'italic') q.format('italic', !q.getFormat(sel).italic);
+        else if (cmd === 'underline') q.format('underline', !q.getFormat(sel).underline);
+        else if (cmd === 'heading1') q.format('header', q.getFormat(sel).header === 1 ? false : 1);
+        else if (cmd === 'heading2') q.format('header', q.getFormat(sel).header === 2 ? false : 2);
+        else if (cmd === 'blockquote') q.format('blockquote', !q.getFormat(sel).blockquote);
+        else if (cmd === 'code') q.format('code', !q.getFormat(sel).code);
+        
+        removeBubble();
+      });
+    });
+  };
+
+  const handleSelectionChange = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.toString().trim() === '') {
+      removeBubble();
+      return;
+    }
+    showBubble(sel);
+  };
+  document.addEventListener('selectionchange', handleSelectionChange);
+
+  // ── Focus & Typewriter Modes ──────────────────────────────────────────────
+  let focusModeActive = false;
+  let typewriterModeActive = false;
+  const focusBtn = container.querySelector('#pv-focus-btn');
+  const typewriterBtn = container.querySelector('#pv-typewriter-btn');
+
+  const updateWordCount = () => {
+    if (!editor) return;
+    const text = editor.getText() || '';
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    const wordCountEl = document.getElementById('focus-word-count');
+    if (wordCountEl) {
+      wordCountEl.textContent = `${words} word${words !== 1 ? 's' : ''}`;
+    }
+  };
+
+  const toggleFocusMode = (forceState) => {
+    focusModeActive = typeof forceState === 'boolean' ? forceState : !focusModeActive;
+    document.body.classList.toggle('focus-mode', focusModeActive);
+    
+    if (focusBtn) {
+      focusBtn.classList.toggle('active', focusModeActive);
+      focusBtn.innerHTML = `<i data-lucide="${focusModeActive ? 'minimize-2' : 'maximize-2'}"></i>`;
+      refreshIcons();
+    }
+
+    // Toggle bottom status panel in focus mode
+    let existingBar = document.querySelector('.focus-mode-bar');
+    if (focusModeActive) {
+      if (!existingBar) {
+        const bar = document.createElement('div');
+        bar.className = 'focus-mode-bar';
+        bar.innerHTML = `
+          <i data-lucide="zap" style="width:12px;height:12px;color:var(--accent-amber);"></i>
+          <span>Focus Mode</span>
+          <span style="margin: 0 8px; opacity: 0.4;">·</span>
+          <span id="focus-word-count">0 words</span>
+          <span style="margin: 0 8px; opacity: 0.4;">·</span>
+          <button id="pv-exit-focus" style="background:none; border:1px solid rgba(255,255,255,0.15); color:var(--text-secondary); border-radius:4px; padding:2px 8px; cursor:pointer; font-size:11px;">Exit (Esc)</button>
+        `;
+        document.body.appendChild(bar);
+        document.getElementById('pv-exit-focus')?.addEventListener('click', () => toggleFocusMode(false));
+        refreshIcons();
+      }
+      updateWordCount();
+    } else if (existingBar) {
+      existingBar.remove();
+    }
+  };
+
+  const toggleTypewriterMode = (forceState) => {
+    typewriterModeActive = typeof forceState === 'boolean' ? forceState : !typewriterModeActive;
+    document.body.classList.toggle('typewriter-mode', typewriterModeActive);
+    if (typewriterBtn) {
+      typewriterBtn.classList.toggle('active', typewriterModeActive);
+    }
+    if (typewriterModeActive) {
+      updateTypewriterLine();
+    } else if (lastActivePara) {
+      lastActivePara.classList.remove('ql-active');
+      lastActivePara = null;
+    }
+  };
+
+  let lastActivePara = null;
+  const updateTypewriterLine = () => {
+    if (!typewriterModeActive || !editor || !editor.quill) return;
+    const q = editor.quill;
+    const range = q.getSelection();
+    if (!range) return;
+
+    const [line] = q.getLine(range.index);
+    if (line && line.domNode) {
+      if (lastActivePara) lastActivePara.classList.remove('ql-active');
+      const el = line.domNode;
+      el.classList.add('ql-active');
+      lastActivePara = el;
+
+      // Center active paragraph vertically
+      const rect = el.getBoundingClientRect();
+      const scrollContainer = document.getElementById('main-content');
+      if (scrollContainer) {
+        const currentScroll = scrollContainer.scrollTop;
+        const rectInContainer = rect.top + currentScroll - scrollContainer.getBoundingClientRect().top;
+        const scrollTarget = rectInContainer - scrollContainer.clientHeight / 2 + rect.height / 2;
+        scrollContainer.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+      }
+    }
+  };
+
+  if (focusBtn) focusBtn.addEventListener('click', () => toggleFocusMode());
+  if (typewriterBtn) typewriterBtn.addEventListener('click', () => toggleTypewriterMode());
+
+  if (editor && editor.quill) {
+    editor.quill.on('selection-change', () => {
+      updateTypewriterLine();
+      if (focusModeActive) updateWordCount();
+    });
+    editor.quill.on('text-change', () => {
+      if (focusModeActive) updateWordCount();
+    });
+  }
+
+
+
+  // Keyboard Shortcuts Handler
+  const handleKeyShortcuts = (e) => {
+    const isFocusShortcut = (e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toUpperCase() === 'F';
+    const isTypewriterShortcut = (e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toUpperCase() === 'T';
+    
+    if (isFocusShortcut) {
+      e.preventDefault();
+      toggleFocusMode();
+    } else if (isTypewriterShortcut) {
+      e.preventDefault();
+      toggleTypewriterMode();
+    } else if (e.key === 'Escape') {
+      if (propsPanel && propsPanel.classList.contains('open')) {
+        e.preventDefault();
+        propsPanel.classList.remove('open');
+        if (propsBtn) propsBtn.classList.remove('active');
+      }
+      if (focusModeActive) {
+        e.preventDefault();
+        toggleFocusMode(false);
+      }
+      if (typewriterModeActive) {
+        e.preventDefault();
+        toggleTypewriterMode(false);
+      }
+    }
+  };
+  document.addEventListener('keydown', handleKeyShortcuts);
+
   // Cleanup tooltip if navigating away
   container._cleanup = () => {
     window.removeEventListener('forge-db-updated', handleDbUpdate);
+    document.removeEventListener('selectionchange', handleSelectionChange);
+    document.removeEventListener('keydown', handleKeyShortcuts);
     clearTimeout(hoverTimer);
     if (previewEl) previewEl.remove();
+    removeBubble();
+    
+    // Remove focus mode classes/elements from body
+    document.body.classList.remove('focus-mode');
+    document.body.classList.remove('typewriter-mode');
+    const existingBar = document.querySelector('.focus-mode-bar');
+    if (existingBar) existingBar.remove();
+
+    // Casual Mode cleanup
+    if (container._simpleKeyHandler) {
+      document.removeEventListener('keydown', container._simpleKeyHandler);
+    }
+
     flushSave();
   };
 }
@@ -679,14 +1219,23 @@ function fieldIcon(type) {
   return map[type] || 'tag';
 }
 
-function renderPropertyInput(field, value) {
+function renderPropertyInput(field, value, characters = []) {
   const esc = v => String(v || '').replace(/"/g, '&quot;');
   
-  if (field.type === 'select' && field.options) {
-    return `<select data-prop-field="${field.id}" class="form-input" style="height: 34px; font-size: var(--fs-sm); background: transparent; border: none; padding: var(--sp-1) var(--sp-2); width: 100%;">
-      <option value="">—</option>
-      ${field.options.map(o => `<option value="${esc(o)}" ${o === value ? 'selected' : ''}>${escHtml(o)}</option>`).join('')}
-    </select>`;
+  if (field.type === 'select') {
+    if (field.isDynamicCharacters) {
+      const options = characters.map(c => c.title || 'Untitled');
+      return `<select data-prop-field="${field.id}" class="form-input" style="height: 34px; font-size: var(--fs-sm); background: transparent; border: none; padding: var(--sp-1) var(--sp-2); width: 100%;">
+        <option value="">—</option>
+        ${options.map(o => `<option value="${esc(o)}" ${o === value ? 'selected' : ''}>${escHtml(o)}</option>`).join('')}
+      </select>`;
+    }
+    if (field.options) {
+      return `<select data-prop-field="${field.id}" class="form-input" style="height: 34px; font-size: var(--fs-sm); background: transparent; border: none; padding: var(--sp-1) var(--sp-2); width: 100%;">
+        <option value="">—</option>
+        ${field.options.map(o => `<option value="${esc(o)}" ${o === value ? 'selected' : ''}>${escHtml(o)}</option>`).join('')}
+      </select>`;
+    }
   }
 
   if (field.type === 'tags' || field.type === 'multiselect' || field.name.toLowerCase() === 'tags') {

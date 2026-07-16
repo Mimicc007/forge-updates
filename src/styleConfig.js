@@ -353,7 +353,10 @@ export const STYLES = {
     // ── Style Provider Methods ─────────────────────────────────────────────
     getNodeTypes: () => [
       ...BASE_NODES,
+      { type: 'beatsheet', label: 'Outline Beat Sheet', icon: '📋', color: '#e5a93b', defaultW: 380, defaultH: 400 },
       { type: 'statblock', label: 'Character Codex', icon: '👤', color: '#e5a93b', defaultW: 300, defaultH: 320, hideFromToolbar: true },
+      { type: 'setup', label: 'Setup Node', icon: '🔍', color: '#3b82f6', defaultW: 320, defaultH: 220 },
+      { type: 'payoff', label: 'Payoff Node', icon: '🎯', color: '#10b981', defaultW: 320, defaultH: 220 },
     ],
     renderGuides: (surface) => renderStoryGuides(surface),
     canvasPanel: {
@@ -421,7 +424,10 @@ export const STYLES = {
         fields: [
           { id: 'f1', name: 'Act', type: 'select', options: ['Act I', 'Act II - Ascent', 'Act II - Descent', 'Act III', 'Epilogue'] },
           { id: 'f2', name: 'Status', type: 'select', options: ['Draft', 'Outline', 'In Progress', 'Completed'] },
-          { id: 'f3', name: 'Word Count', type: 'number' }
+          { id: 'f3', name: 'Word Count', type: 'number' },
+          { id: 'f4', name: 'Primary POV', type: 'select', isDynamicCharacters: true },
+          { id: 'f5', name: 'Secondary POV', type: 'select', isDynamicCharacters: true },
+          { id: 'f6', name: 'Scene Purposes', type: 'tags' }
         ]
       }
     ],
@@ -433,7 +439,11 @@ export const STYLES = {
       { type: 'PERSONALITY_MISMATCH', label: 'Personality Mismatch', icon: '🎭', color: '#a78bfa' },
       { type: 'TIMELINE_CONTRADICTION', label: 'Timeline Contradiction', icon: '⏱️', color: '#f43f5e' },
       { type: 'DEAD_END_THREAD', label: 'Dead-end Thread', icon: '🕳️', color: '#facc15' },
-      { type: 'ORPHANED_PAGE', label: 'Orphaned Page', icon: '👻', color: '#64748b' }
+      { type: 'ORPHANED_PAGE', label: 'Orphaned Page', icon: '👻', color: '#64748b' },
+      { type: 'BROKEN_PREREQ', label: 'Broken Prerequisite', icon: '🎛️', color: '#f43f5e' },
+      { type: 'EMPTY_MOTIVATION', label: 'Empty Motivation', icon: '🎯', color: '#facc15' },
+      { type: 'ABSENCE_GAP', label: 'Absence Gap', icon: '⚠️', color: '#f97316' },
+      { type: 'SIMULTANEOUS_BEAT', label: 'Simultaneous Beat', icon: '⏱️', color: '#f43f5e' }
     ]
   },
 

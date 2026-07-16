@@ -13,7 +13,7 @@ function ensureToastContainer() {
   if (!toastContainer) {
     toastContainer = document.createElement('div');
     toastContainer.className = 'toast-container';
-    document.getElementById('toast-root').appendChild(toastContainer);
+    (document.getElementById('toast-root') || document.body).appendChild(toastContainer);
   }
   return toastContainer;
 }
@@ -35,7 +35,7 @@ export function showToast(message, type = 'info') {
 
 // --- Modal ---
 export function showModal({ title, content, actions, large = false, onClose }) {
-  const root = document.getElementById('modal-root');
+  const root = document.getElementById('modal-root') || document.body;
 
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
@@ -130,7 +130,7 @@ export function showConfirm(title, message) {
 
 // --- Lightbox ---
 export function showLightbox(src) {
-  const root = document.getElementById('modal-root');
+  const root = document.getElementById('modal-root') || document.body;
   const backdrop = document.createElement('div');
   backdrop.className = 'lightbox-backdrop';
   backdrop.innerHTML = `
@@ -558,112 +558,304 @@ export function renderQuillContent(content) {
   }
 }
 
-// --- Global Search (Ctrl+K) ---
+// --- Global Search / Command Palette (Ctrl+K) ---
 let searchOverlay = null;
 
 export function initGlobalSearch(searchFn, onSelect) {
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-      e.preventDefault();
-      openGlobalSearch(searchFn, onSelect);
+  // Quick Actions always available in the palette
+  const QUICK_ACTIONS = [
+    { id: 'nav-dashboard', title: 'Go to Dashboard', icon: 'home', type: 'Navigation', route: 'dashboard' },
+    { id: 'nav-timeline', title: 'Go to Story Timeline', icon: 'map', type: 'Navigation', route: 'story-timeline' },
+    { id: 'nav-graph', title: 'Go to Relationship Graph', icon: 'network', type: 'Navigation', route: 'graph' },
+    { id: 'nav-analytics', title: 'Go to Writer Analytics', icon: 'bar-chart-2', type: 'Navigation', route: 'writer-analytics' },
+    { id: 'nav-continuity', title: 'Go to AI Plot Inspector', icon: 'alert-triangle', type: 'Navigation', route: 'continuity' },
+    { id: 'nav-settings', title: 'Open Settings', icon: 'settings', type: 'Navigation', route: 'settings' },
+  ];
+
+  let selectedIdx = -1;
+  let currentResults = [];
+  let searchTimeout = null;
+
+  function getRecentSearches() {
+    try {
+      return JSON.parse(sessionStorage.getItem('forge-recent-searches') || '[]');
+    } catch (_) {
+      return [];
     }
-  });
-}
-
-function openGlobalSearch(searchFn, onSelect) {
-  if (searchOverlay) return;
-
-  const root = document.getElementById('search-root');
-  searchOverlay = document.createElement('div');
-  searchOverlay.className = 'search-overlay';
-
-  const container = document.createElement('div');
-  container.className = 'search-container';
-
-  const inputWrapper = document.createElement('div');
-  inputWrapper.className = 'search-input-wrapper';
-  inputWrapper.innerHTML = `
-    <span style="color: var(--text-muted);">🔍</span>
-    <input type="text" placeholder="Search characters, lore, story..." autofocus />
-    <span style="font-size: var(--fs-xs); color: var(--text-muted); border: 1px solid var(--border-default); padding: 2px 6px; border-radius: 4px;">ESC</span>
-  `;
-
-  const resultsDiv = document.createElement('div');
-  resultsDiv.className = 'search-results';
-  resultsDiv.style.display = 'none';
-
-  container.appendChild(inputWrapper);
-  container.appendChild(resultsDiv);
-  searchOverlay.appendChild(container);
-
-  function close() {
-    searchOverlay.style.opacity = '0';
-    setTimeout(() => {
-      searchOverlay.remove();
-      searchOverlay = null;
-    }, 150);
   }
 
-  searchOverlay.addEventListener('click', (e) => {
-    if (e.target === searchOverlay) close();
-  });
+  function addRecentSearch(query) {
+    if (!query || query.trim().length < 2) return;
+    const recents = getRecentSearches().filter(q => q !== query.trim());
+    recents.unshift(query.trim());
+    sessionStorage.setItem('forge-recent-searches', JSON.stringify(recents.slice(0, 5)));
+  }
 
-  const input = inputWrapper.querySelector('input');
-  let highlightedIndex = -1;
+  function closeSearch() {
+    if (searchOverlay) {
+      searchOverlay.style.opacity = '0';
+      setTimeout(() => {
+        if (searchOverlay) {
+          searchOverlay.remove();
+          searchOverlay = null;
+        }
+      }, 150);
+    }
+    document.removeEventListener('keydown', onKeyDown);
+  }
 
-  input.addEventListener('input', async () => {
-    const query = input.value.trim();
-    if (query.length < 2) {
-      resultsDiv.style.display = 'none';
+  function selectResult(result) {
+    if (!result) return;
+    closeSearch();
+    if (result.route) {
+      navigate(result.route);
+    } else if (onSelect) {
+      onSelect(result);
+    }
+  }
+
+  function updateSelection() {
+    const items = searchOverlay?.querySelectorAll('.cp-item');
+    if (!items) return;
+    items.forEach((item, idx) => {
+      item.classList.toggle('selected', idx === selectedIdx);
+      if (idx === selectedIdx) item.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  function renderResults(items, query) {
+    currentResults = items;
+    selectedIdx = -1;
+    const listEl = searchOverlay?.querySelector('#cp-list');
+    if (!listEl) return;
+
+    if (items.length === 0 && query.length >= 2) {
+      listEl.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: var(--fs-sm);">No results for "${escapeHtml(query)}"</div>`;
       return;
     }
 
-    const results = await searchFn(query);
-    highlightedIndex = -1;
+    // Group into sections
+    const pageResults = items.filter(r => r._type === 'page' || !r.route);
+    const actionResults = items.filter(r => r.route);
 
-    if (results.length === 0) {
-      resultsDiv.innerHTML = `<div style="padding: var(--sp-4) var(--sp-5); color: var(--text-muted); text-align: center;">No results found</div>`;
-    } else {
-      resultsDiv.innerHTML = results.map((r, i) => `
-        <div class="search-result-item" data-index="${i}">
-          <span class="result-icon">${r.icon}</span>
-          <span class="result-name">${r.name}</span>
-          <span class="result-type">${r.type}</span>
+    let html = '';
+
+    if (query.length < 2) {
+      // Show recent searches + quick nav
+      const recents = getRecentSearches();
+      if (recents.length > 0) {
+        html += `<div class="cp-section-label">Recent Searches</div>`;
+        html += recents.map(q => `
+          <div class="cp-item" data-query="${escapeHtml(q)}" data-type="recent">
+            <div class="cp-item-icon"><i data-lucide="clock" style="width:14px;height:14px;"></i></div>
+            <div class="cp-item-text">
+              <div class="cp-item-title">${escapeHtml(q)}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+      html += `<div class="cp-section-label">Quick Navigation</div>`;
+      html += QUICK_ACTIONS.map(a => `
+        <div class="cp-item" data-route="${a.route}" data-type="action">
+          <div class="cp-item-icon"><i data-lucide="${a.icon}" style="width:14px;height:14px;"></i></div>
+          <div class="cp-item-text">
+            <div class="cp-item-title">${escapeHtml(a.title)}</div>
+          </div>
+          <div class="cp-item-badge">${escapeHtml(a.type)}</div>
         </div>
       `).join('');
-
-      resultsDiv.querySelectorAll('.search-result-item').forEach((item, i) => {
-        item.addEventListener('click', () => {
-          onSelect(results[i]);
-          close();
-        });
-      });
+    } else {
+      if (pageResults.length > 0) {
+        html += `<div class="cp-section-label">Pages</div>`;
+        html += pageResults.map(r => `
+          <div class="cp-item" data-route="${r.route || `page/${r.id}`}" data-type="page">
+            <div class="cp-item-icon"><i data-lucide="${r.icon || 'file-text'}" style="width:14px;height:14px;"></i></div>
+            <div class="cp-item-text">
+              <div class="cp-item-title">${escapeHtml(r.title || r.name || 'Untitled')}</div>
+              ${r.schemaName ? `<div class="cp-item-sub">${escapeHtml(r.schemaName)}</div>` : ''}
+            </div>
+            ${r.schemaName ? `<div class="cp-item-badge">${escapeHtml(r.schemaName)}</div>` : ''}
+          </div>
+        `).join('');
+      }
+      const filteredActions = QUICK_ACTIONS.filter(a => a.title.toLowerCase().includes(query.toLowerCase()));
+      if (filteredActions.length > 0) {
+        html += `<div class="cp-section-label">Navigation</div>`;
+        html += filteredActions.map(a => `
+          <div class="cp-item" data-route="${a.route}" data-type="action">
+            <div class="cp-item-icon"><i data-lucide="${a.icon}" style="width:14px;height:14px;"></i></div>
+            <div class="cp-item-text">
+              <div class="cp-item-title">${escapeHtml(a.title)}</div>
+            </div>
+            <div class="cp-item-badge">${escapeHtml(a.type)}</div>
+          </div>
+        `).join('');
+      }
     }
-    resultsDiv.style.display = 'block';
-  });
 
-  input.addEventListener('keydown', (e) => {
-    const items = resultsDiv.querySelectorAll('.search-result-item');
+    listEl.innerHTML = html || `<div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: var(--fs-sm);">Start typing to search...</div>`;
+    
+    // Event handlers
+    listEl.querySelectorAll('.cp-item').forEach((item, idx) => {
+      item.addEventListener('click', () => {
+        const route = item.dataset.route;
+        const q = item.dataset.query;
+        if (q) {
+          const input = searchOverlay?.querySelector('#cp-input');
+          if (input) { input.value = q; input.dispatchEvent(new Event('input')); }
+        } else if (route) {
+          selectResult({ route });
+        }
+      });
+      item.addEventListener('mouseenter', () => {
+        selectedIdx = idx;
+        updateSelection();
+      });
+    });
+
+    // Rebuild currentResults as flat array for keyboard nav
+    currentResults = [...listEl.querySelectorAll('.cp-item')].map(el => ({
+      route: el.dataset.route,
+      _query: el.dataset.query
+    }));
+    
+    refreshIcons();
+  }
+
+  function onKeyDown(e) {
+    if (!searchOverlay) return;
+    const items = searchOverlay.querySelectorAll('.cp-item');
+    if (e.key === 'Escape') { closeSearch(); return; }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
-      items.forEach((item, i) => item.classList.toggle('highlighted', i === highlightedIndex));
+      selectedIdx = Math.min(selectedIdx + 1, items.length - 1);
+      updateSelection();
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      highlightedIndex = Math.max(highlightedIndex - 1, 0);
-      items.forEach((item, i) => item.classList.toggle('highlighted', i === highlightedIndex));
+      selectedIdx = Math.max(selectedIdx - 1, 0);
+      updateSelection();
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (highlightedIndex >= 0 && items[highlightedIndex]) {
-        items[highlightedIndex].click();
+      const sel = currentResults[selectedIdx];
+      if (sel) {
+        if (sel._query) {
+          const input = searchOverlay?.querySelector('#cp-input');
+          if (input) { input.value = sel._query; input.dispatchEvent(new Event('input')); }
+        } else if (sel.route) {
+          const query = searchOverlay?.querySelector('#cp-input')?.value;
+          if (query) addRecentSearch(query);
+          selectResult(sel);
+        }
       }
-    } else if (e.key === 'Escape') {
-      close();
+    }
+  }
+
+  function openSearch() {
+    if (searchOverlay) { searchOverlay.querySelector('#cp-input')?.focus(); return; }
+
+    const root = document.getElementById('search-root') || document.body;
+    searchOverlay = document.createElement('div');
+    searchOverlay.id = 'global-search-overlay';
+    searchOverlay.style.cssText = `
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding-top: 100px;
+      opacity: 0;
+      transition: opacity 150ms ease;
+    `;
+    searchOverlay.innerHTML = `
+      <div style="
+        width: 600px; max-width: calc(100vw - 32px);
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-xl);
+        box-shadow: 0 32px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+        overflow: hidden;
+        animation: scaleIn 180ms var(--easing-out-expo) both;
+      ">
+        <!-- Search input -->
+        <div style="display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid var(--border-subtle);">
+          <i data-lucide="search" style="width:16px;height:16px;color:var(--text-muted);flex-shrink:0;"></i>
+          <input
+            id="cp-input"
+            type="text"
+            placeholder="Search pages or type a command..."
+            autocomplete="off"
+            spellcheck="false"
+            style="
+              flex:1; background:transparent; border:none; outline:none;
+              color:var(--text-primary); font-size:var(--fs-md);
+              font-family:var(--font-body);
+            "
+          >
+          <kbd style="
+            font-family:var(--font-hud); font-size:10px; color:var(--text-muted);
+            background:var(--bg-surface); border:1px solid var(--border-default);
+            border-radius:4px; padding:2px 6px; flex-shrink:0;
+          ">ESC</kbd>
+        </div>
+        <!-- Results -->
+        <div id="cp-list" style="max-height:400px; overflow-y:auto; padding:4px;"></div>
+        <!-- Footer -->
+        <div style="display:flex; align-items:center; gap:12px; padding:8px 16px; border-top:1px solid var(--border-subtle); font-size:10px; color:var(--text-muted);">
+          <span><kbd style="font-family:var(--font-hud); background:var(--bg-surface); border:1px solid var(--border-default); border-radius:3px; padding:1px 5px;">↑↓</kbd> navigate</span>
+          <span><kbd style="font-family:var(--font-hud); background:var(--bg-surface); border:1px solid var(--border-default); border-radius:3px; padding:1px 5px;">↵</kbd> open</span>
+          <span><kbd style="font-family:var(--font-hud); background:var(--bg-surface); border:1px solid var(--border-default); border-radius:3px; padding:1px 5px;">Esc</kbd> close</span>
+        </div>
+      </div>
+    `;
+
+    root.appendChild(searchOverlay);
+    requestAnimationFrame(() => { searchOverlay.style.opacity = '1'; });
+
+    const input = searchOverlay.querySelector('#cp-input');
+    input.focus();
+
+    // Show initial state (recent + quick actions)
+    renderResults([], '');
+
+    // Input handler
+    input.addEventListener('input', () => {
+      const query = input.value.trim();
+      clearTimeout(searchTimeout);
+      if (query.length < 2) {
+        renderResults([], query);
+        return;
+      }
+      searchTimeout = setTimeout(async () => {
+        const results = await searchFn(query);
+        const tagged = results.map(r => ({ ...r, _type: 'page' }));
+        renderResults(tagged, query);
+      }, 150);
+    });
+
+    // Backdrop close
+    searchOverlay.addEventListener('click', (e) => {
+      if (e.target === searchOverlay) {
+        const query = input.value.trim();
+        if (query.length >= 2) addRecentSearch(query);
+        closeSearch();
+      }
+    });
+
+    document.addEventListener('keydown', onKeyDown);
+    
+    refreshIcons();
+  }
+
+  // Register Ctrl+K / Cmd+K
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      if (searchOverlay) closeSearch();
+      else openSearch();
     }
   });
 
-  root.appendChild(searchOverlay);
-  input.focus();
+  // Expose for external open (e.g. sidebar button)
+  window.openForgeSearch = openSearch;
 }
 
 // --- Time formatting ---

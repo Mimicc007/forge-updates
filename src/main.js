@@ -19,13 +19,14 @@ import { renderSettings } from './pages/settings.js';
 import { renderProjectHub } from './pages/projectHub.js';
 import { renderStoryTimeline } from './pages/storyTimeline.js';
 import { renderQuickCapture } from './pages/quickCapture.js';
-import { renderInbox } from './pages/inbox.js';
 import { initFirebaseSync } from './sync.js';
 import './tutorial.js'; // Ensure tutorial hooks load
 import { initAiDrawer } from './ai.js';
 import { initSceneMode } from './sceneMode.js';
 import { initContinuityMonitor } from './continuityMonitor.js';
 import { renderContinuityEngine } from './pages/continuityEngine.js';
+import { renderWriterAnalytics } from './pages/writerAnalytics.js';
+// import './agentation-mount.js'; // Dev-only Agentation annotation toolbar
 
 // Setup routes
 registerRoute('dashboard', renderDashboard);
@@ -37,8 +38,8 @@ registerRoute('graph', renderGraphView);
 registerRoute('workspace/:tabId', renderWorkspace);
 registerRoute('story-timeline', renderStoryTimeline);
 registerRoute('quick-capture', renderQuickCapture);
-registerRoute('inbox', renderInbox);
 registerRoute('continuity', renderContinuityEngine);
+registerRoute('writer-analytics', renderWriterAnalytics);
 
 // --- Initialize ---
 export function refreshIcons() {
@@ -251,7 +252,7 @@ async function checkUpdatesOnBoot() {
     const list = await resp.json();
     if (!Array.isArray(list)) return;
     const latestUpdate = list[0];
-    let currentVersion = 'v0.1.5-alpha';
+    let currentVersion = 'v0.2.0-alpha';
     if (window.electronAPI && window.electronAPI.getAppVersion) {
       try {
         const v = await window.electronAPI.getAppVersion();

@@ -111,7 +111,7 @@ export async function renderQuickCapture(container) {
           ops: [{ insert: contentVal + '\n' }]
         }),
         properties: {},
-        isInbox: schemaIdVal ? false : true, // Mark as inbox draft if no schema
+        isInbox: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

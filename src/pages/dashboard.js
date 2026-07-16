@@ -20,95 +20,611 @@ export async function renderDashboard(container) {
   // Recent pages
   const recentPages = [...pages].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 6);
 
+  // Word count estimate
+  const totalWords = pages.reduce((acc, p) => {
+    let content = p.content || p.body || '';
+    if (content.startsWith('{')) {
+      try {
+        const delta = JSON.parse(content);
+        if (delta.ops) {
+          content = delta.ops
+            .filter(op => typeof op.insert === 'string')
+            .map(op => op.insert)
+            .join('');
+        }
+      } catch (_) {
+        content = content.replace(/<[^>]+>/g, '');
+      }
+    } else {
+      content = content.replace(/<[^>]+>/g, '');
+    }
+    const words = content.trim().split(/\s+/).filter(Boolean);
+    return acc + words.length;
+  }, 0);
+
+  // Load recent activity for the activity feed
+  let recentActivity = [];
+  try {
+    if (db.getRecentActivity) {
+      recentActivity = await db.getRecentActivity(project.id, 10);
+    }
+  } catch (_) {
+    recentActivity = [];
+  }
+
+  // Feature showcase config (like vvd's toolkit section)
+  const FEATURES = [
+    {
+      id: 'timeline',
+      icon: 'map',
+      label: 'Story Timeline',
+      color: '#f59e0b',
+      desc: 'Map your entire narrative arc across acts and beats. Visualize your story\'s structure with a cinematic drag-and-drop timeline.',
+      route: 'story-timeline',
+      stat: null,
+      isNew: false,
+    },
+    {
+      id: 'graph',
+      icon: 'network',
+      label: 'Relationship Graph',
+      color: '#38bdf8',
+      desc: 'See how every character, faction, and event connects. A living map of your world\'s web of relationships.',
+      route: 'graph',
+      stat: null,
+      isNew: false,
+    },
+    {
+      id: 'continuity',
+      icon: 'alert-triangle',
+      label: 'AI Plot Inspector',
+      color: '#a78bfa',
+      desc: 'Ignis continuously scans your work for plot holes, timeline contradictions, and character inconsistencies — automatically.',
+      route: 'continuity',
+      stat: null,
+      isNew: true,
+    },
+    {
+      id: 'workspace',
+      icon: 'layout-dashboard',
+      label: 'Infinite Canvas',
+      color: '#10b981',
+      desc: 'An infinite spatial workspace to map ideas, build mind maps, and visualize concepts with typed nodes and smart connections.',
+      route: null, // opens tab picker
+      stat: `${tabs.length} canvas${tabs.length !== 1 ? 'es' : ''}`,
+      isNew: false,
+    },
+    {
+      id: 'analytics',
+      icon: 'bar-chart-2',
+      label: 'Writer Analytics',
+      color: '#f43f5e',
+      desc: 'Track your writing velocity, word count trends, and productivity sessions. Understand how and when you write best.',
+      route: 'writer-analytics',
+      stat: totalWords > 0 ? `${totalWords.toLocaleString()} words` : null,
+      isNew: false,
+    },
+    {
+      id: 'databases',
+      icon: 'database',
+      label: 'Knowledge Databases',
+      color: '#e5a93b',
+      desc: `${schemas.length} structured database${schemas.length !== 1 ? 's' : ''} — characters, items, locations, factions, abilities, and more.`,
+      route: null, // opens schema modal
+      stat: `${schemas.length} database${schemas.length !== 1 ? 's' : ''}`,
+      isNew: false,
+    },
+  ];
+
   container.innerHTML = `
-    <div class="page-header">
-      <div class="page-header-row">
-        <div>
-          <h1 class="page-title" id="dash-title">${escapeHtml(project.name)}</h1>
-          <p class="page-subtitle" id="dash-tagline">${escapeHtml(project.settings?.genre || 'Game Universe')}</p>
+    <style>
+      /* Dashboard VVD-Style Overhaul */
+      .dash-root {
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+        padding: 0;
+        position: relative;
+      }
+
+      /* Hero section */
+      .dash-hero {
+        padding: 40px 40px 32px;
+        position: relative;
+        border-bottom: 1px solid var(--glass-border);
+        background: linear-gradient(180deg,
+          rgba(7,11,20,0) 0%,
+          rgba(13,20,32,0.4) 100%
+        );
+      }
+      .dash-hero-shimmer {
+        margin-bottom: 16px;
+      }
+      .dash-hero-title {
+        font-family: var(--font-heading);
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+        margin-bottom: 6px;
+      }
+      .dash-hero-subtitle {
+        font-size: var(--fs-sm);
+        color: var(--text-tertiary);
+        font-weight: 400;
+        letter-spacing: 0.01em;
+      }
+      .dash-hero-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+      }
+
+      /* Feature Showcase — VVD two-column layout */
+      .dash-showcase {
+        display: flex;
+        gap: 0;
+        flex: 1;
+        min-height: 0;
+        padding: 32px 0 0;
+      }
+
+      /* Left sticky tab rail */
+      .dash-tab-rail {
+        flex-shrink: 0;
+        width: 260px;
+        padding: 0 24px 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        position: sticky;
+        top: 0;
+        align-self: flex-start;
+      }
+      .dash-rail-label {
+        font-size: var(--fs-xs);
+        font-weight: 600;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 4px;
+        padding: 0 4px;
+      }
+
+      /* Right preview panel */
+      .dash-preview-panel {
+        flex: 1;
+        padding: 0 40px 40px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow-y: auto;
+        min-height: 0;
+      }
+
+      /* Feature preview card */
+      .dash-feature-card {
+        border-radius: var(--radius-2xl);
+        border: 1px solid var(--glass-border);
+        background: var(--glass-surface);
+        padding: 28px 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        opacity: 0;
+        transform: translateX(24px);
+        transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+      .dash-feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg,
+          transparent,
+          var(--card-accent-color, rgba(255,255,255,0.15)) 50%,
+          transparent
+        );
+      }
+      .dash-feature-card.visible {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      .dash-feature-card:hover {
+        border-color: var(--glass-border-hover);
+        background: var(--glass-surface-hover);
+      }
+      .dash-feature-card.active-feature {
+        border-color: var(--glass-border-hover);
+        background: rgba(255,255,255,0.06);
+      }
+      .dash-feature-card-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .dash-feature-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-xl);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .dash-feature-label {
+        font-family: var(--font-heading);
+        font-size: var(--fs-lg);
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .dash-feature-desc {
+        font-size: var(--fs-sm);
+        color: var(--text-secondary);
+        line-height: 1.6;
+      }
+      .dash-feature-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 4px;
+      }
+      .dash-feature-stat {
+        font-family: var(--font-hud);
+        font-size: var(--fs-xs);
+        color: var(--text-tertiary);
+        letter-spacing: 0.04em;
+      }
+      .dash-feature-cta {
+        font-size: var(--fs-xs);
+        font-weight: 600;
+        color: var(--text-tertiary);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: color var(--transition-fast);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .dash-feature-card:hover .dash-feature-cta {
+        color: var(--text-secondary);
+      }
+
+      /* Stats bar */
+      .dash-stats-bar {
+        display: flex;
+        gap: 0;
+        border-top: 1px solid var(--glass-border);
+        margin: 0;
+      }
+      .dash-stat-item {
+        flex: 1;
+        padding: 20px 28px;
+        border-right: 1px solid var(--glass-border);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        cursor: default;
+        transition: background var(--transition-fast);
+      }
+      .dash-stat-item:last-child { border-right: none; }
+      .dash-stat-item:hover { background: var(--glass-surface); }
+      .dash-stat-val {
+        font-family: var(--font-hud);
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+        line-height: 1;
+      }
+      .dash-stat-label {
+        font-size: var(--fs-xs);
+        color: var(--text-tertiary);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      /* Recent pages section */
+      .dash-recent {
+        padding: 24px 40px 32px;
+        border-top: 1px solid var(--glass-border);
+      }
+      .dash-section-label {
+        margin-bottom: 16px;
+      }
+      .dash-recent-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .dash-recent-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-subtle);
+        background: var(--glass-surface);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        font-size: var(--fs-sm);
+        color: var(--text-primary);
+        font-weight: 500;
+      }
+      .dash-recent-item:hover {
+        border-color: var(--glass-border-hover);
+        background: var(--glass-surface-hover);
+      }
+      .dash-recent-time {
+        margin-left: auto;
+        font-size: var(--fs-xs);
+        color: var(--text-tertiary);
+        flex-shrink: 0;
+      }
+    </style>
+
+    <div class="dash-root">
+
+      <!-- Hero -->
+      <div class="dash-hero dot-grid-bg" style="position: relative;">
+        <div class="dash-hero-shimmer">
+          <span class="shimmer-badge">
+            <span class="badge-new">New</span>
+            AI Plot Inspector is live
+          </span>
         </div>
-        <div class="flex gap-3">
-          <button class="btn btn-secondary" id="play-tutorial-btn"><i data-lucide="play-circle" style="width:16px;height:16px;margin-right:8px;color:var(--accent-cyan);"></i> Tutorial</button>
-          <button class="btn btn-secondary" id="project-settings-btn"><i data-lucide="settings" style="width:16px;height:16px;margin-right:8px;"></i> Settings</button>
-          <button class="btn btn-primary" id="new-canvas-btn" style="background: var(--accent-purple); border-color: var(--accent-purple);"><i data-lucide="layout-dashboard" style="width:16px;height:16px;margin-right:8px;"></i> New Canvas</button>
-          <button class="btn btn-primary" id="new-database-btn"><i data-lucide="database" style="width:16px;height:16px;margin-right:8px;"></i> New Database</button>
-        </div>
-      </div>
-    </div>
-    
-    <div class="hud-divider"></div>
-
-    <!-- Stats -->
-    <div class="stats-grid mb-6">
-      <div class="stat-card" style="cursor: default;">
-        <div class="stat-card-icon" style="background: var(--accent-primary-dim); color: var(--accent-primary);"><i data-lucide="database"></i></div>
-        <div class="stat-card-value">${schemas.length}</div>
-        <div class="stat-card-label">Databases</div>
-      </div>
-      <div class="stat-card" style="cursor: default;">
-        <div class="stat-card-icon" style="background: var(--accent-secondary-dim); color: var(--accent-secondary);"><i data-lucide="file-text"></i></div>
-        <div class="stat-card-value">${pages.length}</div>
-        <div class="stat-card-label">Pages</div>
-      </div>
-      <div class="stat-card" style="cursor: default;">
-        <div class="stat-card-icon" style="background: var(--accent-cyan-dim); color: var(--accent-cyan);"><i data-lucide="layout-dashboard"></i></div>
-        <div class="stat-card-value">${tabs.length}</div>
-        <div class="stat-card-label">Canvases</div>
-      </div>
-      <div class="stat-card" style="cursor: pointer;" onclick="window.location.hash='#/graph'">
-        <div class="stat-card-icon" style="background: var(--accent-purple-dim); color: var(--accent-purple);"><i data-lucide="network"></i></div>
-        <div class="stat-card-value">Graph</div>
-        <div class="stat-card-label">View Connections</div>
-      </div>
-    </div>
-
-    <div class="hud-divider"></div>
-
-    <div class="grid-2" style="grid-template-columns: 1.5fr 1fr;">
-      <!-- Recent Pages -->
-      <div class="card" style="align-self: start;">
-        <h3 class="detail-section-title"><i data-lucide="clock" style="width: 18px; height: 18px; margin-right: 8px;"></i> Recent Pages</h3>
-        <div id="recent-pages-list" style="display: flex; flex-direction: column; gap: var(--sp-2);">
-          ${recentPages.length === 0 ? `
-            <div class="empty-state" style="padding: var(--sp-8);">
-              <div class="empty-state-icon" style="font-size: 2rem;"><i data-lucide="file-plus"></i></div>
-              <p class="empty-state-text">No pages yet. Create a database first!</p>
+        
+        <!-- Project Health Badge -->
+        <div id="project-health-badge" style="position: absolute; top: 40px; right: 40px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+          <div style="font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);">Universe Integrity</div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 80px; height: 6px; background: rgba(255,255,255,0.06); border-radius: 9999px; overflow: hidden; border: 1px solid rgba(255,255,255,0.04);">
+              <div id="project-health-bar" style="width: 0%; height: 100%; background: var(--accent-green); transition: width 0.8s var(--easing-out-expo);"></div>
             </div>
-          ` : recentPages.map(p => `
-            <div class="activity-item" style="cursor: pointer; padding: var(--sp-3); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: rgba(255,255,255,0.02); display: flex; align-items: center; gap: var(--sp-3); transition: all var(--transition-fast);" onclick="window.location.hash='#/page/${p.id}'">
-              <div style="color: var(--accent-primary); flex-shrink: 0;">
-                ${p.coverImage
-                  ? `<img src="${p.coverImage}" alt="" style="width: 28px; height: 28px; border-radius: 6px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);">`
-                  : `<i data-lucide="${p.icon || 'file-text'}"></i>`
-                }
+            <span id="project-health-value" style="font-family: var(--font-hud); font-size: var(--fs-xs); font-weight: 700; color: var(--accent-green);">100%</span>
+          </div>
+        </div>
+
+        <h1 class="dash-hero-title" style="background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 40%, var(--accent-amber) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; padding-right: 180px;">${escapeHtml(project.name)}</h1>
+        <p class="dash-hero-subtitle">${escapeHtml(project.settings?.genre || 'Creative Project')} &nbsp;·&nbsp; Your storytelling workspace</p>
+        <div class="dash-hero-actions">
+          <button class="btn btn-primary" id="new-canvas-btn">
+            <i data-lucide="layout-dashboard" style="width:14px;height:14px;margin-right:6px;"></i>New Canvas
+          </button>
+          <button class="btn btn-secondary" id="new-database-btn">
+            <i data-lucide="database" style="width:14px;height:14px;margin-right:6px;"></i>New Database
+          </button>
+          <button class="btn btn-secondary" id="play-tutorial-btn">
+            <i data-lucide="play-circle" style="width:14px;height:14px;margin-right:6px;"></i>Tutorial
+          </button>
+          <button class="btn btn-secondary" id="project-settings-btn">
+            <i data-lucide="settings" style="width:14px;height:14px;margin-right:6px;"></i>Settings
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Bar -->
+      <div class="dash-stats-bar">
+        <div class="dash-stat-item">
+          <div class="dash-stat-val dash-stat-value" data-value="${pages.length}">0</div>
+          <div class="dash-stat-label">Pages</div>
+        </div>
+        <div class="dash-stat-item">
+          <div class="dash-stat-val dash-stat-value" data-value="${schemas.length}">0</div>
+          <div class="dash-stat-label">Databases</div>
+        </div>
+        <div class="dash-stat-item">
+          <div class="dash-stat-val dash-stat-value" data-value="${tabs.length}">0</div>
+          <div class="dash-stat-label">Canvases</div>
+        </div>
+        <div class="dash-stat-item">
+          <div class="dash-stat-val dash-stat-value" data-value="${totalWords}">0</div>
+          <div class="dash-stat-label">Words</div>
+        </div>
+      </div>
+
+      <!-- Feature Showcase (VVD two-column) -->
+      <div class="dash-showcase">
+
+        <!-- Left: sticky tab rail -->
+        <div class="dash-tab-rail">
+          <div class="vvd-badge" style="margin-bottom: 12px; width: fit-content;">
+            <i data-lucide="layout-grid" style="width:12px;height:12px;"></i>
+            The Toolkit
+          </div>
+          <div class="dash-rail-label">Features</div>
+          ${FEATURES.map((f, i) => `
+            <div class="feature-tab-pill" data-feature-id="${f.id}" style="opacity: ${i === 0 ? '1' : '0.4'};" tabindex="0">
+              <span style="color:${f.color}; display:flex; align-items:center; flex-shrink:0;">
+                <i data-lucide="${f.icon}" style="width:14px;height:14px;"></i>
+              </span>
+              <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${f.label}</span>
+              ${f.isNew ? `<span class="badge-new" style="background:#10b981; color:white; font-size:0.55rem; font-weight:700; padding:2px 5px; border-radius:var(--radius-full); letter-spacing:0.05em; text-transform:uppercase; flex-shrink:0;">NEW</span>` : ''}
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Right: feature preview cards -->
+        <div class="dash-preview-panel" id="dash-feature-panel">
+          ${FEATURES.map((f, i) => `
+            <div class="dash-feature-card visible" data-feature-id="${f.id}" data-route="${f.route || ''}" style="--card-accent-color:${f.color}44;">
+              <div class="dash-feature-card-header">
+                <div class="dash-feature-icon" style="background:${f.color}20;">
+                  <i data-lucide="${f.icon}" style="width:20px;height:20px;color:${f.color};"></i>
+                </div>
+                <div class="dash-feature-label">
+                  ${f.label}
+                  ${f.isNew ? `<span class="shimmer-badge"><span class="badge-new">New</span></span>` : ''}
+                </div>
               </div>
-              <div style="flex: 1; font-weight: var(--fw-medium); color: var(--text-primary);">
-                ${escapeHtml(p.title || 'Untitled')}
+              <p class="dash-feature-desc">${f.desc}</p>
+              <div class="dash-feature-footer">
+                ${f.stat ? `<span class="dash-feature-stat">${f.stat}</span>` : '<span></span>'}
+                <span class="dash-feature-cta">
+                  Open <i data-lucide="arrow-right" style="width:12px;height:12px;"></i>
+                </span>
               </div>
-              <div class="activity-time" style="font-size: var(--fs-xs); color: var(--text-muted);">${timeAgo(p.updatedAt)}</div>
             </div>
           `).join('')}
         </div>
       </div>
 
-      <!-- Settings & Tools -->
-      <div class="flex flex-col gap-4" style="align-self: start;">
-        <!-- Data Management -->
-        <div class="card card-sm">
-          <div class="flex items-center gap-3 mb-4">
-            <span style="color: var(--text-secondary);"><i data-lucide="database-backup"></i></span>
-            <span style="font-weight: var(--fw-semibold); color: var(--text-primary);">Data Management</span>
-          </div>
-          <div class="flex flex-col gap-2">
-            <button class="btn btn-secondary btn-sm w-full" id="export-btn"><i data-lucide="download" style="width:14px;height:14px;margin-right:6px;"></i> Export Data</button>
-            <button class="btn btn-secondary btn-sm w-full" id="import-btn"><i data-lucide="upload" style="width:14px;height:14px;margin-right:6px;"></i> Import Data</button>
-          </div>
+      <!-- Recent Pages -->
+      ${recentPages.length > 0 ? `
+      <div class="dash-recent">
+        <div class="dash-section-label">
+          <span class="vvd-badge">
+            <i data-lucide="clock" style="width:12px;height:12px;"></i>
+            Recent
+          </span>
+        </div>
+        <div class="dash-recent-grid">
+          ${recentPages.map(p => `
+            <div class="dash-recent-item" data-page-id="${p.id}">
+              ${p.coverImage
+                ? `<img src="${p.coverImage}" alt="" style="width:22px;height:22px;border-radius:4px;object-fit:cover;flex-shrink:0;">`
+                : `<i data-lucide="${p.icon || 'file-text'}" style="width:14px;height:14px;flex-shrink:0;color:var(--text-tertiary);"></i>`
+              }
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.title || 'Untitled')}</span>
+              <span class="dash-recent-time">${timeAgo(p.updatedAt)}</span>
+            </div>
+          `).join('')}
         </div>
       </div>
+      ` : ''}
+
+      <!-- Activity Feed -->
+      ${recentActivity.length > 0 ? `
+      <div class="dash-recent" style="border-top: 1px solid var(--glass-border);">
+        <div class="dash-section-label">
+          <span class="vvd-badge">
+            <i data-lucide="activity" style="width:12px;height:12px;"></i>
+            Recent Activity
+          </span>
+        </div>
+        <div class="activity-feed">
+          ${recentActivity.map(entry => `
+            <div class="activity-item" data-page-id="${entry.pageId}" data-action="${entry.action}">
+              <div class="activity-dot ${entry.action}"></div>
+              <div class="activity-text">
+                <strong>${escapeHtml(entry.pageTitle || 'Untitled')}</strong>
+                ${entry.action === 'created' ? 'was created' : entry.action === 'deleted' ? 'was deleted' : 'was edited'}
+                <div class="activity-time">${timeAgo(entry.timestamp)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+
+      <!-- Quick Action Deck -->
+      <div style="position: fixed; bottom: 24px; right: 24px; display: flex; align-items: center; gap: 8px; z-index: var(--z-sticky);">
+        <button class="btn btn-secondary btn-icon" id="qa-search-btn" title="Search Palette (Ctrl+K)" style="border-radius: 50%; width: 40px; height: 40px; box-shadow: var(--shadow-lg);">
+          <i data-lucide="search" style="width:16px;height:16px;"></i>
+        </button>
+        <button class="btn btn-secondary btn-icon" id="qa-settings-btn" title="Settings" style="border-radius: 50%; width: 40px; height: 40px; box-shadow: var(--shadow-lg);">
+          <i data-lucide="settings" style="width:16px;height:16px;"></i>
+        </button>
+      </div>
+
+      <!-- Data Management (hidden, accessible via Settings) -->
+      <div style="display:none;">
+        <button id="export-btn">Export</button>
+        <button id="import-btn">Import</button>
+      </div>
+
     </div>
   `;
 
-  // Event Listeners
+  // ── Tab rail hover interaction ──
+  const pills = container.querySelectorAll('.feature-tab-pill');
+  const featureCards = container.querySelectorAll('.dash-feature-card');
+
+  const activateFeature = (featureId) => {
+    pills.forEach(p => {
+      const isMatch = p.dataset.featureId === featureId;
+      p.style.opacity = isMatch ? '1' : '0.4';
+      p.classList.toggle('active', isMatch);
+      p.style.borderLeft = isMatch ? '2px solid var(--accent-amber)' : '2px solid transparent';
+      p.style.background = isMatch ? 'rgba(245, 158, 11, 0.06)' : 'transparent';
+      p.style.color = isMatch ? 'var(--text-primary)' : 'var(--text-secondary)';
+    });
+    featureCards.forEach(c => {
+      const isMatch = c.dataset.featureId === featureId;
+      if (isMatch) {
+        c.style.display = 'flex';
+        c.classList.add('visible');
+        c.style.animation = 'scaleIn 220ms var(--easing-out-expo) both';
+      } else {
+        c.style.display = 'none';
+        c.classList.remove('visible');
+        c.style.animation = '';
+      }
+    });
+  };
+
+  pills.forEach(pill => {
+    pill.addEventListener('click', () => activateFeature(pill.dataset.featureId));
+    pill.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') activateFeature(pill.dataset.featureId); });
+  });
+
+  // Activate first feature by default
+  activateFeature(FEATURES[0].id);
+
+  // ── Stat number count-up animation ──
+  container.querySelectorAll('.dash-stat-value').forEach(el => {
+    const target = parseInt(el.dataset.value || el.textContent, 10);
+    if (isNaN(target) || target === 0) {
+      el.textContent = el.dataset.value || '0';
+      return;
+    }
+    const duration = 800;
+    const startTime = performance.now();
+    
+    const tick = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      const current = Math.round(eased * target);
+      el.textContent = current >= 1000 ? `${(current / 1000).toFixed(1)}k` : String(current);
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      }
+    };
+    requestAnimationFrame(tick);
+  });
+
+  // ── Feature card click navigation ──
+  featureCards.forEach(card => {
+    card.addEventListener('click', () => {
+      const route = card.dataset.route;
+      const featureId = card.dataset.featureId;
+      activateFeature(featureId);
+      if (route) {
+        navigate(route);
+      } else if (featureId === 'workspace') {
+        showCreateTabModal(async ({ name, icon }) => {
+          const tab = await db.saveTab({ name, icon });
+          await refreshSidebarLists();
+          navigate('workspace/' + tab.id);
+        });
+      } else if (featureId === 'databases') {
+        showCreateSchemaModal(project.id);
+      }
+    });
+  });
+
+  // ── Hero action buttons ──
   container.querySelector('#new-database-btn')?.addEventListener('click', () => {
     showCreateSchemaModal(project.id);
   });
@@ -129,8 +645,26 @@ export async function renderDashboard(container) {
     navigate('settings');
   });
 
-  // Export / Import
-  container.querySelector('#export-btn').addEventListener('click', async () => {
+
+
+  // ── Recent pages click ──
+  container.querySelectorAll('.dash-recent-item[data-page-id]').forEach(item => {
+    item.addEventListener('click', () => {
+      navigate('page/' + item.dataset.pageId);
+    });
+  });
+
+  // ── Recent activity click ──
+  container.querySelectorAll('.activity-item[data-page-id]').forEach(item => {
+    if (item.dataset.action !== 'deleted') {
+      item.addEventListener('click', () => {
+        navigate('page/' + item.dataset.pageId);
+      });
+    }
+  });
+
+  // ── Export / Import (still wired up, triggered from settings) ──
+  container.querySelector('#export-btn')?.addEventListener('click', async () => {
     try {
       const data = await db.exportUniversalData();
       const json = JSON.stringify(data, null, 2);
@@ -147,7 +681,7 @@ export async function renderDashboard(container) {
     }
   });
 
-  container.querySelector('#import-btn').addEventListener('click', () => {
+  container.querySelector('#import-btn')?.addEventListener('click', () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
@@ -167,7 +701,7 @@ export async function renderDashboard(container) {
     input.click();
   });
 
-  // Onboarding trigger
+  // ── Onboarding trigger ──
   const onboardKey = `forge-onboarded-${project.id}`;
   if (!localStorage.getItem(onboardKey)) {
     localStorage.setItem(onboardKey, 'true');
@@ -175,6 +709,44 @@ export async function renderDashboard(container) {
       showStyleOnboardingModal(project);
     }, 800);
   }
+
+  // ── Calculate Project Health Integrity ──
+  const calculateIntegrity = () => {
+    try {
+      const issuesStr = localStorage.getItem('forge-continuity-issues') || '[]';
+      const issues = JSON.parse(issuesStr);
+      const activeIssues = issues.filter(issue => issue.status !== 'resolved');
+      const health = Math.max(20, 100 - activeIssues.length * 8); // Minimum 20% integrity
+      
+      const bar = container.querySelector('#project-health-bar');
+      const val = container.querySelector('#project-health-value');
+      if (bar && val) {
+        bar.style.width = `${health}%`;
+        val.textContent = `${health}%`;
+        if (health < 50) {
+          bar.style.background = 'var(--accent-red)';
+          val.style.color = 'var(--accent-red)';
+        } else if (health < 80) {
+          bar.style.background = 'var(--accent-amber)';
+          val.style.color = 'var(--accent-amber)';
+        } else {
+          bar.style.background = 'var(--accent-green)';
+          val.style.color = 'var(--accent-green)';
+        }
+      }
+    } catch (_) {}
+  };
+  calculateIntegrity();
+  // Listen for issues update to keep it live
+  window.addEventListener('forge-continuity-issues-found', calculateIntegrity);
+
+  // ── Quick Action Deck Click Listeners ──
+  container.querySelector('#qa-search-btn')?.addEventListener('click', () => {
+    window.openForgeSearch?.();
+  });
+  container.querySelector('#qa-settings-btn')?.addEventListener('click', () => {
+    navigate('settings');
+  });
 
   refreshIcons();
 }

@@ -43,10 +43,10 @@ function injectStyles() {
       display: flex;
       flex-direction: column;
       height: 100%;
-      background: var(--bg-deep, #080612);
+      background: var(--bg-deepest, #070b14);
       position: relative;
       overflow: hidden;
-      font-family: var(--font-hud, 'Inter', monospace);
+      font-family: var(--font-body, 'Space Grotesk', 'Inter', sans-serif);
     }
 
     /* ── Toolbar ── */
@@ -81,13 +81,18 @@ function injectStyles() {
     .stc-toolbar-subtitle { font-size: 0.68rem; color: rgba(229,169,59,0.55); letter-spacing: 0.07em; text-transform: uppercase; }
     .stc-toolbar-right { display: flex; align-items: center; gap: 10px; }
 
+    .stc-search-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
     .stc-search {
       background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 6px;
       color: #fff;
       font-size: 0.78rem;
-      padding: 5px 10px;
+      padding: 5px 28px 5px 10px;
       width: 160px;
       outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
@@ -96,6 +101,41 @@ function injectStyles() {
       border-color: rgba(229,169,59,0.4);
       box-shadow: 0 0 0 2px rgba(229,169,59,0.08);
     }
+    .stc-search-clear {
+      position: absolute;
+      right: 6px;
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.35);
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+      display: none;
+    }
+    .stc-search-clear:hover { color: #fff; }
+    .stc-search-badge {
+      font-size: 0.65rem;
+      font-family: var(--font-hud, monospace);
+      color: rgba(229,169,59,0.8);
+      background: rgba(229,169,59,0.08);
+      border: 1px solid rgba(229,169,59,0.2);
+      border-radius: 12px;
+      padding: 2px 7px;
+      white-space: nowrap;
+      display: none;
+    }
+    .stc-empty-state {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .stc-empty-state-icon { font-size: 2rem; margin-bottom: 8px; }
+    .stc-empty-state-text { font-size: 0.8rem; color: rgba(255,255,255,0.3); font-family: var(--font-hud); }
 
     .stc-btn {
       display: inline-flex; align-items: center; gap: 5px;
@@ -134,6 +174,7 @@ function injectStyles() {
       display: flex;
       min-width: ${SURFACE_W + 200}px;
       height: ${SURFACE_H}px;
+      transition: height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
 
     /* ── Lane sidebar ── */
@@ -161,32 +202,18 @@ function injectStyles() {
       box-sizing: border-box;
       position: relative;
       overflow: hidden;
+      transition: height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.3s ease, opacity 0.3s ease;
     }
-    .stc-lane-header::before {
-      content: '';
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 3px;
-      border-radius: 0 2px 2px 0;
+    .stc-lane-header.focused {
+      background: rgba(255, 255, 255, 0.02);
+      box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.01);
     }
-    .stc-lane-header-icon { font-size: 1.2rem; margin-bottom: 6px; display: block; }
-    .stc-lane-header-name {
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+    .stc-lane-header.unfocused {
+      opacity: 0.45;
     }
-    .stc-lane-header-desc {
-      font-size: 0.6rem;
-      color: rgba(255,255,255,0.3);
-      margin-top: 4px;
-      line-height: 1.4;
-    }
-    .stc-lane-glow {
-      position: absolute;
-      inset: 0;
-      opacity: 0.04;
-      pointer-events: none;
+    .stc-lane-header.unfocused:hover {
+      opacity: 0.8;
+      background: rgba(255, 255, 255, 0.015);
     }
 
     /* ── Surface ── */
@@ -196,6 +223,7 @@ function injectStyles() {
       position: relative;
       flex-shrink: 0;
       overflow: hidden;
+      transition: height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
 
     /* ── Act bands ── */
@@ -238,6 +266,7 @@ function injectStyles() {
       pointer-events: none;
       box-sizing: border-box;
       border-bottom: 1px solid rgba(255,255,255,0.025);
+      transition: height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
 
     /* ── Cards layer ── */
@@ -253,11 +282,15 @@ function injectStyles() {
       position: absolute;
       width: ${CARD_W}px;
       height: ${CARD_H}px;
-      background: rgba(10, 8, 18, 0.82);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.07);
+      /* vvd-style: very dark glass with inset border instead of CSS border */
+      background: rgba(7, 11, 20, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.45),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.06);
       padding: 10px 12px;
       box-sizing: border-box;
       cursor: grab;
@@ -266,23 +299,60 @@ function injectStyles() {
       display: flex;
       flex-direction: column;
       gap: 5px;
-      transition: box-shadow 0.2s, border-color 0.2s, transform 0.1s;
-      animation: stc-card-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+      /* card-wake: start slightly desaturated, wake on hover */
+      filter: brightness(0.75) saturate(0.5);
+      transition:
+        box-shadow 0.3s ease,
+        border-color 0.3s ease,
+        transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        filter 0.35s ease,
+        width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+        height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+        top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+        left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      animation: stc-card-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
     .stc-card:active { cursor: grabbing; transform: scale(1.02); }
     .stc-card:hover {
-      border-color: rgba(255,255,255,0.12);
+      filter: brightness(1) saturate(1);
+      border-color: rgba(255, 255, 255, 0.14);
+      box-shadow:
+        0 8px 32px rgba(0,0,0,0.5),
+        0 0 16px var(--card-glow, rgba(229,169,59,0.25)),
+        inset 0 0 0 1px rgba(255,255,255,0.10);
+      transform: translateY(-1px);
     }
     .stc-card.stc-card-dragging {
       z-index: 999;
       cursor: grabbing;
-      opacity: 0.92;
-      transform: rotate(0.8deg) scale(1.03);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 20px var(--card-glow, rgba(229,169,59,0.3));
+      opacity: 0.94;
+      filter: brightness(1) saturate(1);
+      transform: rotate(0.6deg) scale(1.04);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 24px var(--card-glow, rgba(229,169,59,0.3));
+      transition: none !important;
+    }
+    .stc-card.stc-card-compact {
+      width: 140px !important;
+      height: 38px !important;
+      padding: 4px 10px !important;
+      border-radius: 20px !important;
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 2px !important;
+      overflow: hidden !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+      background: rgba(10, 8, 18, 0.92) !important;
+    }
+    .stc-card.stc-card-compact .stc-card-body,
+    .stc-card.stc-card-compact .stc-card-footer,
+    .stc-card.stc-card-compact .stc-card-header {
+      display: none !important;
     }
     @keyframes stc-card-enter {
-      from { opacity: 0; transform: translateY(12px) scale(0.97); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
+      from { opacity: 0; transform: translateY(16px) scale(0.96); filter: blur(4px); }
+      to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0px); }
     }
     .stc-card-header {
       display: flex;
@@ -292,12 +362,13 @@ function injectStyles() {
     .stc-card-title {
       flex: 1;
       font-size: 0.8rem;
-      font-weight: 700;
+      font-weight: 600;
       color: #fff;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      font-family: var(--font-heading, 'Inter');
+      font-family: var(--font-heading, 'Space Grotesk', 'Inter');
+      letter-spacing: -0.01em;
     }
     .stc-card-edit-btn {
       background: transparent;
@@ -314,12 +385,13 @@ function injectStyles() {
     .stc-card-body {
       flex: 1;
       font-size: 0.68rem;
-      color: rgba(255,255,255,0.45);
-      line-height: 1.45;
+      color: rgba(255,255,255,0.50);
+      line-height: 1.5;
       overflow: hidden;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
+      letter-spacing: 0.01em;
     }
     .stc-card-footer {
       display: flex;
@@ -575,10 +647,15 @@ let timelineState = {
   beats:       [],
   allPages:    [],
   surface:     null,
+  sidebar:     null,
   svg:         null,
   cardLayer:   null,
   searchQuery: '',
-  boardScroll: null
+  boardScroll: null,
+  focusedLane: null,
+  collapsedActs: {},
+  expandedCardId: null,
+  justSavedId: null
 };
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
@@ -586,8 +663,195 @@ function esc(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function getActName(beat) {
+  const f1 = beat.properties?.f1 || 'Act I';
+  if (f1.includes('Act III')) return 'ACT III';
+  if (f1.includes('Act II')) return 'ACT II';
+  if (f1.includes('Act I')) return 'ACT I';
+  if (f1.includes('Epilogue')) return 'EPILOGUE';
+  return 'ACT I';
+}
+
+function getActFromX(x) {
+  if (x < 700) return 'ACT I';
+  if (x < 1400) return 'ACT II';
+  if (x < 2100) return 'ACT III';
+  return 'EPILOGUE';
+}
+
+function getActDefaultFieldVal(actName) {
+  if (actName === 'ACT I') return 'Act I';
+  if (actName === 'ACT II') return 'Act II - Ascent';
+  if (actName === 'ACT III') return 'Act III';
+  if (actName === 'EPILOGUE') return 'Epilogue';
+  return 'Act I';
+}
+
+function getRenderX(x, collapsed) {
+  if (!collapsed) return x;
+  const w1 = collapsed['ACT I'] ? 80 : 700;
+  const w2 = collapsed['ACT II'] ? 80 : 700;
+  const w3 = collapsed['ACT III'] ? 80 : 700;
+
+  const actStarts = {
+    'ACT I': 0,
+    'ACT II': w1,
+    'ACT III': w1 + w2,
+    'EPILOGUE': w1 + w2 + w3
+  };
+
+  if (x < 700) {
+    if (collapsed['ACT I']) return -9999;
+    return x;
+  } else if (x < 1400) {
+    if (collapsed['ACT II']) return -9999;
+    return actStarts['ACT II'] + (x - 700);
+  } else if (x < 2100) {
+    if (collapsed['ACT III']) return -9999;
+    return actStarts['ACT III'] + (x - 1400);
+  } else {
+    if (collapsed['EPILOGUE']) return -9999;
+    return actStarts['EPILOGUE'] + (x - 2100);
+  }
+}
+
+function getLogicalX(renderX, collapsed) {
+  if (!collapsed) return renderX;
+  const w1 = collapsed['ACT I'] ? 80 : 700;
+  const w2 = collapsed['ACT II'] ? 80 : 700;
+  const w3 = collapsed['ACT III'] ? 80 : 700;
+
+  const actStarts = {
+    'ACT I': 0,
+    'ACT II': w1,
+    'ACT III': w1 + w2,
+    'EPILOGUE': w1 + w2 + w3
+  };
+
+  if (!collapsed['EPILOGUE'] && renderX >= actStarts['EPILOGUE']) {
+    return 2100 + (renderX - actStarts['EPILOGUE']);
+  } else if (!collapsed['ACT III'] && renderX >= actStarts['ACT III']) {
+    return 1400 + (renderX - actStarts['ACT III']);
+  } else if (!collapsed['ACT II'] && renderX >= actStarts['ACT II']) {
+    return 700 + (renderX - actStarts['ACT II']);
+  } else {
+    return renderX;
+  }
+}
+
+function extractPlainText(content) {
+  if (!content) return '';
+  try {
+    const delta = typeof content === 'string' ? JSON.parse(content) : content;
+    if (delta && Array.isArray(delta.ops)) {
+      return delta.ops.map(op => (typeof op.insert === 'string' ? op.insert : '')).join('').trim();
+    }
+  } catch (_) {}
+  return String(content).trim();
+}
+
+function getLaneHeight(laneId) {
+  if (timelineState.focusedLane === null || timelineState.focusedLane === undefined) {
+    return 180;
+  }
+  return timelineState.focusedLane === laneId ? 380 : 110;
+}
+
 function getLaneY(laneId) {
-  return laneId * LANE_HEIGHT + LANE_PADDING;
+  let y = LANE_PADDING;
+  for (let i = 0; i < laneId; i++) {
+    y += getLaneHeight(i);
+  }
+  return y;
+}
+
+function getSurfaceHeight() {
+  if (timelineState.focusedLane === null || timelineState.focusedLane === undefined) {
+    return LANE_PADDING + 180 * 3 + 30; // 620
+  }
+  return LANE_PADDING + 380 + 110 * 2 + 30; // 680
+}
+
+function getLaneFromY(y) {
+  const y0 = getLaneY(0);
+  const h0 = getLaneHeight(0);
+  const y1 = getLaneY(1);
+  const h1 = getLaneHeight(1);
+
+  if (y < y0 + h0) return 0;
+  if (y < y1 + h1) return 1;
+  return 2;
+}
+
+function getCardVisualGeometry(beat) {
+  const cardEl = timelineState.cardLayer ? timelineState.cardLayer.querySelector(`[data-beat-id="${beat.id}"]`) : null;
+  const laneId = beat.properties.lane;
+  const isLaneFocused = timelineState.focusedLane === laneId;
+  const isExpanded = timelineState.expandedCardId === beat.id;
+
+  let w = 140;
+  let h = 38;
+  if (isExpanded) {
+    w = CARD_W;
+    h = CARD_H;
+  }
+
+  if (cardEl) {
+    const x = parseFloat(cardEl.style.left) || 0;
+    const y = parseFloat(cardEl.style.top) || 0;
+    return { x, y, h, w };
+  }
+
+  const rx = getRenderX(beat.properties.x, timelineState.collapsedActs);
+  let x = rx;
+  let y = 0;
+
+  if (isLaneFocused) {
+    const yOffset = beat.properties.yOffset || 0;
+    y = getLaneY(laneId) + yOffset;
+  } else {
+    const laneH = getLaneHeight(laneId);
+    y = getLaneY(laneId) + (laneH - h) / 2;
+  }
+
+  return { x, y, h, w };
+}
+
+function refreshBoard() {
+  if (!timelineState.surface || !timelineState.sidebar) return;
+
+  const boardInnerEl = timelineState.surface.parentElement;
+  if (!boardInnerEl) return;
+
+  // Batch all DOM mutations in a single animation frame to prevent paint flicker
+  requestAnimationFrame(() => {
+    if (!timelineState.sidebar || !timelineState.surface) return;
+
+    // Re-build sidebar
+    const oldSidebar = timelineState.sidebar;
+    const newSidebar = buildLaneSidebar();
+    timelineState.sidebar = newSidebar;
+    boardInnerEl.replaceChild(newSidebar, oldSidebar);
+
+    // Re-build surface
+    const oldSurface = timelineState.surface;
+    const newSurface = buildSurface();
+    timelineState.surface = newSurface;
+    boardInnerEl.replaceChild(newSurface, oldSurface);
+
+    // Set minWidth and height of boardInner
+    const col = timelineState.collapsedActs || {};
+    const w1 = col['ACT I'] ? 80 : 700;
+    const w2 = col['ACT II'] ? 80 : 700;
+    const w3 = col['ACT III'] ? 80 : 700;
+    const w4 = col['EPILOGUE'] ? 80 : 900;
+    boardInnerEl.style.minWidth = `${w1 + w2 + w3 + w4 + 240}px`;
+    boardInnerEl.style.height = `${getSurfaceHeight()}px`;
+
+    renderBeats();
+    drawConnections();
+    updateMinimap();
+  });
 }
 
 function getInitials(name) {
@@ -614,6 +878,31 @@ export async function renderStoryTimeline(container) {
   }
 
   timelineState.project = project;
+
+  // Load collapsed acts state
+  const collapsedKey = `forge-timeline-collapsed-${project.id}`;
+  try {
+    const saved = localStorage.getItem(collapsedKey);
+    timelineState.collapsedActs = saved ? JSON.parse(saved) : {
+      'ACT I': false,
+      'ACT II': false,
+      'ACT III': false,
+      'EPILOGUE': false
+    };
+  } catch (e) {
+    timelineState.collapsedActs = {
+      'ACT I': false,
+      'ACT II': false,
+      'ACT III': false,
+      'EPILOGUE': false
+    };
+  }
+
+  // Load focused lane state
+  const focusedLaneKey = `forge-timeline-focused-lane-${project.id}`;
+  const savedFocusedLane = localStorage.getItem(focusedLaneKey);
+  timelineState.focusedLane = savedFocusedLane !== null && savedFocusedLane !== '' ? parseInt(savedFocusedLane) : null;
+
   await loadTimelineData();
 
   const page = document.createElement('div');
@@ -632,12 +921,23 @@ export async function renderStoryTimeline(container) {
   boardInner.className = 'stc-board-inner';
 
   // Lane sidebar
-  boardInner.appendChild(buildLaneSidebar());
+  const sidebar = buildLaneSidebar();
+  timelineState.sidebar = sidebar;
+  boardInner.appendChild(sidebar);
 
   // Surface
   const surface = buildSurface();
   timelineState.surface = surface;
   boardInner.appendChild(surface);
+
+  // Set minWidth and height of boardInner based on act collapse widths
+  const col = timelineState.collapsedActs || {};
+  const w1 = col['ACT I'] ? 80 : 700;
+  const w2 = col['ACT II'] ? 80 : 700;
+  const w3 = col['ACT III'] ? 80 : 700;
+  const w4 = col['EPILOGUE'] ? 80 : 900;
+  boardInner.style.minWidth = `${w1 + w2 + w3 + w4 + 240}px`;
+  boardInner.style.height = `${getSurfaceHeight()}px`;
 
   boardScroll.appendChild(boardInner);
   page.appendChild(boardScroll);
@@ -662,6 +962,10 @@ export async function renderStoryTimeline(container) {
     const detail = e.detail;
     if (detail && detail.storeName === 'pages') {
       if (container.querySelector('.stc-card-dragging')) return;
+      if (timelineState.justSavedId) {
+        timelineState.justSavedId = null;
+        return;
+      }
       await loadTimelineData();
       renderBeats();
       drawConnections();
@@ -679,40 +983,87 @@ export async function renderStoryTimeline(container) {
 async function loadTimelineData() {
   const pages = await getPages(timelineState.project.id);
   timelineState.allPages = pages;
-  timelineState.beats = pages.filter(p => p.isStoryBeat === true);
+  // Include pages that are story beats OR belong to the chapters schema
+  // (mirrors the logic in graphView.js and pageView.js)
+  timelineState.beats = pages.filter(p => p.isStoryBeat === true || p.schemaId === 'story-chapters-schema');
 
-  if (timelineState.beats.length === 0) {
-    const samples = [
-      {
-        id: generateId(),
-        projectId: timelineState.project.id,
-        title: 'The Spark',
-        content: 'The protagonist discovers an ancient artifact in the ruins, attracting unwanted attention from the kingdom.',
-        isStoryBeat: true,
-        properties: { lane: 0, x: 80, prerequisites: [], characters: [] }
-      },
-      {
-        id: generateId(),
-        projectId: timelineState.project.id,
-        title: 'Kingdom Pursuit',
-        content: 'Guards raid the village. The protagonist must escape into the dark forest before dawn.',
-        isStoryBeat: true,
-        properties: { lane: 0, x: 440, prerequisites: [], characters: [] }
-      },
-      {
-        id: generateId(),
-        projectId: timelineState.project.id,
-        title: 'Meeting the Mentor',
-        content: 'Deep in the forest, they encounter an exiled scholar who knows the artifact\'s secrets and agrees to help.',
-        isStoryBeat: true,
-        properties: { lane: 1, x: 800, prerequisites: [], characters: [] }
+  const initKey = `forge-timeline-init-${timelineState.project.id}`;
+  if (timelineState.beats.length === 0 && !localStorage.getItem(initKey)) {
+    localStorage.setItem(initKey, 'true');
+    const styleId = timelineState.project?.settings?.style || 'story';
+    
+    // Only seed sample nodes for Story Writer projects
+    if (styleId === 'story') {
+      const storySchemaId = 'story-chapters-schema';
+      const defaultStoryProps = {
+        f1: 'Act I',
+        f2: 'Draft',
+        f3: 0,
+        f4: '',
+        f5: '',
+        f6: ''
+      };
+
+      const samples = [
+        {
+          id: generateId(),
+          projectId: timelineState.project.id,
+          title: 'The Spark',
+          content: 'The protagonist discovers an ancient artifact in the ruins, attracting unwanted attention from the kingdom.',
+          isStoryBeat: true,
+          schemaId: storySchemaId,
+          properties: { lane: 0, x: 80, prerequisites: [], characters: [], ...defaultStoryProps }
+        },
+        {
+          id: generateId(),
+          projectId: timelineState.project.id,
+          title: 'Kingdom Pursuit',
+          content: 'Guards raid the village. The protagonist must escape into the dark forest before dawn.',
+          isStoryBeat: true,
+          schemaId: storySchemaId,
+          properties: { lane: 0, x: 440, prerequisites: [], characters: [], ...defaultStoryProps }
+        },
+        {
+          id: generateId(),
+          projectId: timelineState.project.id,
+          title: 'Meeting the Mentor',
+          content: 'Deep in the forest, they encounter an exiled scholar who knows the artifact\'s secrets and agrees to help.',
+          isStoryBeat: true,
+          schemaId: storySchemaId,
+          properties: { lane: 1, x: 800, prerequisites: [], characters: [], ...defaultStoryProps }
+        }
+      ];
+      samples[1].properties.prerequisites.push(samples[0].id);
+      samples[2].properties.prerequisites.push(samples[1].id);
+      for (const s of samples) await savePage(s);
+      timelineState.beats = samples;
+      timelineState.allPages = await getPages(timelineState.project.id);
+    }
+  } else {
+    localStorage.setItem(initKey, 'true');
+  }
+
+  // Two-way sync: Update beat logical coordinate X with database Act choice (properties.f1)
+  const isStory = timelineState.project?.settings?.style === 'story';
+  if (isStory) {
+    let updatedCount = 0;
+    for (const b of timelineState.beats) {
+      const currentAct = getActName(b);
+      const expectedAct = getActFromX(b.properties.x);
+      if (currentAct !== expectedAct) {
+        if (currentAct === 'ACT I') b.properties.x = 80;
+        else if (currentAct === 'ACT II') b.properties.x = 780;
+        else if (currentAct === 'ACT III') b.properties.x = 1480;
+        else if (currentAct === 'EPILOGUE') b.properties.x = 2180;
+        await savePage(b);
+        updatedCount++;
       }
-    ];
-    samples[1].properties.prerequisites.push(samples[0].id);
-    samples[2].properties.prerequisites.push(samples[1].id);
-    for (const s of samples) await savePage(s);
-    timelineState.beats = samples;
-    timelineState.allPages = await getPages(timelineState.project.id);
+    }
+    if (updatedCount > 0) {
+      const pages = await getPages(timelineState.project.id);
+      timelineState.allPages = pages;
+      timelineState.beats = pages.filter(p => p.isStoryBeat === true || p.schemaId === 'story-chapters-schema');
+    }
   }
 }
 
@@ -731,17 +1082,58 @@ function buildToolbar() {
   const right = document.createElement('div');
   right.className = 'stc-toolbar-right';
 
+  const searchWrap = document.createElement('div');
+  searchWrap.className = 'stc-search-wrap';
+
   const search = document.createElement('input');
   search.type = 'text';
   search.className = 'stc-search';
   search.placeholder = '🔍 Filter beats…';
   search.value = timelineState.searchQuery;
-  search.addEventListener('input', (e) => {
-    timelineState.searchQuery = e.target.value.toLowerCase();
+
+  const searchClear = document.createElement('button');
+  searchClear.className = 'stc-search-clear';
+  searchClear.textContent = '×';
+  searchClear.title = 'Clear search';
+  searchClear.addEventListener('click', () => {
+    search.value = '';
+    timelineState.searchQuery = '';
+    searchClear.style.display = 'none';
+    searchBadge.style.display = 'none';
     renderBeats();
     drawConnections();
     updateMinimap();
   });
+
+  const searchBadge = document.createElement('span');
+  searchBadge.className = 'stc-search-badge';
+
+  search.addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    timelineState.searchQuery = q;
+    searchClear.style.display = q ? 'block' : 'none';
+    const matchCount = timelineState.beats.filter(b =>
+      !q || (b.title || '').toLowerCase().includes(q) ||
+      extractPlainText(b.content).toLowerCase().includes(q)
+    ).length;
+    if (q) {
+      searchBadge.textContent = `${matchCount} beat${matchCount !== 1 ? 's' : ''}`;
+      searchBadge.style.display = 'inline';
+    } else {
+      searchBadge.style.display = 'none';
+    }
+    renderBeats();
+    drawConnections();
+    updateMinimap();
+  });
+
+  // Restore clear button state if there's already a query
+  if (timelineState.searchQuery) {
+    searchClear.style.display = 'block';
+    searchBadge.style.display = 'inline';
+  }
+
+  searchWrap.append(search, searchClear);
 
   const alignBtn = document.createElement('button');
   alignBtn.className = 'stc-btn stc-btn-secondary';
@@ -754,7 +1146,7 @@ function buildToolbar() {
   addBtn.innerHTML = '+ Add Beat';
   addBtn.addEventListener('click', createNewBeat);
 
-  right.append(search, alignBtn, addBtn);
+  right.append(searchWrap, searchBadge, alignBtn, addBtn);
   tb.append(left, right);
   return tb;
 }
@@ -766,19 +1158,54 @@ function buildLaneSidebar() {
 
   LANES.forEach(lane => {
     const hdr = document.createElement('div');
-    hdr.className = 'stc-lane-header';
-    hdr.style.cssText = `border-left: 3px solid ${lane.color};`;
+    const isFocused = timelineState.focusedLane === lane.id;
+    hdr.className = 'stc-lane-header' + (isFocused ? ' focused' : '') + (timelineState.focusedLane !== null && !isFocused ? ' unfocused' : '');
+    hdr.style.cssText = `border-left: 3px solid ${lane.color}; height: ${getLaneHeight(lane.id)}px; cursor: pointer;`;
 
     const glowBg = document.createElement('div');
     glowBg.className = 'stc-lane-glow';
     glowBg.style.cssText = `background: linear-gradient(to right, ${lane.color}, transparent); animation: stc-glow-pulse 4s ease-in-out infinite;`;
 
-    hdr.innerHTML = `
-      <span class="stc-lane-header-icon">${lane.icon}</span>
-      <span class="stc-lane-header-name" style="color:${lane.color};">${lane.name}</span>
-      <span class="stc-lane-header-desc">${lane.desc}</span>
-    `;
+    if (isFocused) {
+      hdr.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom: 2px;">
+          <span class="stc-lane-header-icon" style="font-size:1.3rem; margin-bottom:0;">${lane.icon}</span>
+          <span style="font-size:0.55rem; text-transform:uppercase; letter-spacing:0.08em; background:${lane.color}25; color:${lane.color}; padding:2px 6px; border-radius:12px; font-weight:700; border: 1px solid ${lane.color}40;">Active Lane</span>
+        </div>
+        <span class="stc-lane-header-name" style="color:${lane.color}; font-size:0.75rem; font-weight:800; margin-top:2px;">${lane.name}</span>
+        <span class="stc-lane-header-desc" style="color:rgba(255,255,255,0.5); font-size:0.58rem; margin-top:4px; line-height:1.35;">${lane.desc}</span>
+        <div style="margin-top:auto; font-size:0.55rem; color:${lane.color}; font-weight:600; display:flex; align-items:center; gap:4px; opacity:0.85;">
+          <span>⛶ Click to collapse lane</span>
+        </div>
+      `;
+    } else if (timelineState.focusedLane !== null) {
+      hdr.innerHTML = `
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="stc-lane-header-icon" style="font-size:0.95rem; margin-bottom:0; opacity:0.6;">${lane.icon}</span>
+          <span class="stc-lane-header-name" style="color:rgba(255,255,255,0.45); font-size:0.62rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${lane.name}</span>
+        </div>
+        <div style="margin-top:4px; font-size:0.52rem; color:rgba(255,255,255,0.25);">Click to expand</div>
+      `;
+    } else {
+      hdr.innerHTML = `
+        <span class="stc-lane-header-icon">${lane.icon}</span>
+        <span class="stc-lane-header-name" style="color:${lane.color};">${lane.name}</span>
+        <span class="stc-lane-header-desc">${lane.desc}</span>
+      `;
+    }
+
     hdr.appendChild(glowBg);
+
+    hdr.addEventListener('click', () => {
+      if (timelineState.focusedLane === lane.id) {
+        timelineState.focusedLane = null;
+      } else {
+        timelineState.focusedLane = lane.id;
+      }
+      localStorage.setItem(`forge-timeline-focused-lane-${timelineState.project.id}`, timelineState.focusedLane !== null ? timelineState.focusedLane : '');
+      refreshBoard();
+    });
+
     sidebar.appendChild(hdr);
   });
 
@@ -789,15 +1216,48 @@ function buildLaneSidebar() {
 function buildSurface() {
   const surface = document.createElement('div');
   surface.className = 'stc-surface';
+  surface.style.height = `${getSurfaceHeight()}px`;
+
+  const collapsed = timelineState.collapsedActs || {};
+  const w1 = collapsed['ACT I'] ? 80 : 700;
+  const w2 = collapsed['ACT II'] ? 80 : 700;
+  const w3 = collapsed['ACT III'] ? 80 : 700;
+  const w4 = collapsed['EPILOGUE'] ? 80 : 900;
+  const currentSurfaceW = w1 + w2 + w3 + w4;
+  surface.style.width = `${currentSurfaceW}px`;
+
+  const actStarts = {
+    'ACT I': 0,
+    'ACT II': w1,
+    'ACT III': w1 + w2,
+    'EPILOGUE': w1 + w2 + w3
+  };
+  const actWidths = {
+    'ACT I': w1,
+    'ACT II': w2,
+    'ACT III': w3,
+    'EPILOGUE': w4
+  };
+
+  const boardInner = timelineState.surface ? timelineState.surface.parentElement : null;
+  if (boardInner) {
+    boardInner.style.minWidth = `${currentSurfaceW + 240}px`;
+    boardInner.style.height = `${getSurfaceHeight()}px`;
+  }
 
   // ── Act bands
   ACTS.forEach((act, i) => {
+    const actName = act.name;
+    const isCollapsed = collapsed[actName];
+
     const band = document.createElement('div');
     band.className = 'stc-act-band';
-    band.style.left = `${act.xStart}px`;
-
-    const actWidth = (i < ACTS.length - 1) ? ACTS[i + 1].xStart - act.xStart : SURFACE_W - act.xStart;
-    band.style.width = `${actWidth}px`;
+    if (isCollapsed) {
+      band.style.background = 'rgba(255,255,255,0.015)';
+      band.style.borderRight = '1px dashed rgba(255,255,255,0.05)';
+    }
+    band.style.left = `${actStarts[actName]}px`;
+    band.style.width = `${actWidths[actName]}px`;
 
     // Subtle gradient tones
     const tones = [
@@ -806,11 +1266,59 @@ function buildSurface() {
       'rgba(16,185,129,0.015)',
       'rgba(59,130,246,0.018)'
     ];
-    band.style.background = `linear-gradient(to bottom, ${tones[i]}, transparent 40%, transparent 60%, ${tones[i]})`;
+    if (!isCollapsed) {
+      band.style.background = `linear-gradient(to bottom, ${tones[i]}, transparent 40%, transparent 60%, ${tones[i]})`;
+    }
 
     const label = document.createElement('div');
-    label.className = 'stc-act-label';
-    label.textContent = act.name;
+    label.style.cssText = `
+      position: absolute;
+      top: 8px;
+      left: 16px;
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      color: rgba(229,169,59,0.5);
+      text-transform: uppercase;
+      font-family: var(--font-hud, monospace);
+      cursor: pointer;
+      pointer-events: auto;
+      user-select: none;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.15s;
+    `;
+    // Beat count badge for collapsed acts
+    const beatsInAct = timelineState.beats.filter(b => {
+      const actN = getActName(b);
+      return actN === actName;
+    }).length;
+    const countPill = isCollapsed && beatsInAct > 0
+      ? ` <span style="font-size:0.5rem; background:rgba(229,169,59,0.15); color:rgba(229,169,59,0.8); border:1px solid rgba(229,169,59,0.25); border-radius:10px; padding:1px 5px; margin-left:4px; font-weight:700;">${beatsInAct}</span>`
+      : '';
+    label.innerHTML = `<span>${isCollapsed ? '➕' : '➖'}</span> <span>${act.name}${countPill}</span>`;
+
+    if (isCollapsed) {
+      label.style.transform = 'rotate(90deg)';
+      label.style.transformOrigin = 'left top';
+      label.style.left = '35px';
+      label.style.top = '50px';
+      label.style.whiteSpace = 'nowrap';
+    }
+
+    label.addEventListener('mouseenter', () => { label.style.color = '#e5a93b'; });
+    label.addEventListener('mouseleave', () => { label.style.color = 'rgba(229,169,59,0.5)'; });
+
+    label.addEventListener('click', (e) => {
+      e.stopPropagation();
+      timelineState.collapsedActs[actName] = !isCollapsed;
+      const collapsedKey = `forge-timeline-collapsed-${timelineState.project.id}`;
+      localStorage.setItem(collapsedKey, JSON.stringify(timelineState.collapsedActs));
+      refreshBoard();
+    });
+
     band.appendChild(label);
 
     if (i > 0) {
@@ -829,6 +1337,8 @@ function buildSurface() {
     const row = document.createElement('div');
     row.className = 'stc-lane-row';
     row.style.top = `${getLaneY(lane.id)}px`;
+    row.style.height = `${getLaneHeight(lane.id)}px`;
+    row.style.width = `${currentSurfaceW}px`;
     row.style.borderLeft = `2px solid ${lane.color}18`;
     row.style.background = `linear-gradient(to right, ${lane.color}08, transparent 300px)`;
     surface.appendChild(row);
@@ -847,6 +1357,18 @@ function buildSurface() {
   surface.appendChild(cardLayer);
   timelineState.cardLayer = cardLayer;
 
+  // Background clicks collapse expanded cards
+  surface.addEventListener('click', (e) => {
+    if (e.target === surface || e.target.classList.contains('stc-lane-row') || e.target.classList.contains('stc-act-band') || e.target.classList.contains('stc-act-divider')) {
+      if (timelineState.expandedCardId !== null) {
+        timelineState.expandedCardId = null;
+        renderBeats();
+        drawConnections();
+        updateMinimap();
+      }
+    }
+  });
+
   return surface;
 }
 
@@ -860,7 +1382,9 @@ async function openBeatCanvas(beat) {
     try {
       const tab = await getTab(tabId);
       if (tab) tabExists = true;
-    } catch (_) {}
+    } catch (_) {
+      showToast('Rebuilding canvas for this beat…', 'info');
+    }
   }
 
   if (!tabId || !tabExists) {
@@ -894,7 +1418,7 @@ async function seedBeatCanvas(tabId, beat) {
 
   // Node 1: Beat info richtext card
   const beatContent = beat.title
-    ? `<h2>${beat.title}</h2><p>${beat.content || 'No synopsis yet.'}</p>`
+    ? `<h2>${beat.title}</h2><p>${esc(extractPlainText(beat.content)) || 'No synopsis yet.'}</p>`
     : `<p>No synopsis yet.</p>`;
 
   await saveNode({
@@ -1003,96 +1527,164 @@ async function seedBeatCanvas(tabId, beat) {
 
 // ─── Render Beats ─────────────────────────────────────────────────────────────
 function renderBeats() {
-  timelineState.cardLayer.innerHTML = '';
+  // Remove any existing empty state
+  timelineState.surface?.querySelector('.stc-empty-state')?.remove();
+
   const q = timelineState.searchQuery;
 
   const visible = timelineState.beats.filter(b => {
     if (!q) return true;
-    return (b.title || '').toLowerCase().includes(q) || (b.content || '').toLowerCase().includes(q);
+    return (b.title || '').toLowerCase().includes(q) || extractPlainText(b.content).toLowerCase().includes(q);
   });
 
+  // Empty-state overlay when search finds nothing
+  if (q && visible.length === 0 && timelineState.surface) {
+    const emptyEl = document.createElement('div');
+    emptyEl.className = 'stc-empty-state';
+    emptyEl.innerHTML = `
+      <div class="stc-empty-state-icon">🔍</div>
+      <div class="stc-empty-state-text">No beats match "${q}"</div>
+    `;
+    timelineState.surface.appendChild(emptyEl);
+  }
+
+  // Get all existing card elements mapped by beat ID for reconciliation
+  const existingCards = {};
+  timelineState.cardLayer.querySelectorAll('.stc-card').forEach(card => {
+    const bid = card.dataset.beatId;
+    if (bid) existingCards[bid] = card;
+  });
+
+  const processedIds = new Set();
+
   visible.forEach((beat, i) => {
+    const rx = getRenderX(beat.properties.x, timelineState.collapsedActs);
+    if (rx < 0) return; // Skip rendering (hidden/collapsed)
+
+    processedIds.add(beat.id);
     const lane = LANES.find(l => l.id === beat.properties.lane) || LANES[0];
-    const card = document.createElement('div');
-    card.className = 'stc-card';
-    card.dataset.beatId = beat.id;
-    card.style.left = `${beat.properties.x}px`;
-    card.style.top = `${getLaneY(beat.properties.lane)}px`;
+    const geom = getCardVisualGeometry(beat);
+
+    let card = existingCards[beat.id];
+    let isNew = false;
+
+    if (!card) {
+      card = document.createElement('div');
+      card.className = 'stc-card';
+      card.dataset.beatId = beat.id;
+      isNew = true;
+    }
+
+    // Update style properties in-place
+    card.style.left = `${geom.x}px`;
+    card.style.top = `${geom.y}px`;
+    
+    // Toggle compact mode class
+    const isCompact = geom.h === 38;
+    if (isCompact) {
+      card.classList.add('stc-card-compact');
+    } else {
+      card.classList.remove('stc-card-compact');
+    }
+
     card.style.borderLeft = `4px solid ${lane.color}`;
     card.style.setProperty('--card-glow', `${lane.color}4d`);
     card.style.animationDelay = `${i * 0.04}s`;
 
-    // Hover glow
-    card.addEventListener('mouseenter', () => {
-      card.style.boxShadow = `0 8px 32px rgba(0,0,0,0.4), 0 0 14px ${lane.color}30, inset 0 0 0 1px ${lane.color}20`;
-      card.style.borderColor = `${lane.color}80`;
-    });
-    card.addEventListener('mouseleave', () => {
-      if (!card.classList.contains('stc-card-dragging')) {
-        card.style.boxShadow = '';
-        card.style.borderColor = 'rgba(255,255,255,0.07)';
-        card.style.borderLeft = `4px solid ${lane.color}`;
-      }
-    });
-
-    // Build footer
+    // Only rebuild inner HTML if something changed or it's a new card
     const charIds = beat.properties.characters || [];
     const prereqCount = (beat.properties.prerequisites || []).length;
+    const plainText = extractPlainText(beat.content || 'No synopsis.');
+    const fingerprint = `${beat.title}|${plainText}|${charIds.join(',')}|${prereqCount}|${isCompact}`;
 
-    let footerHTML = '';
-    charIds.slice(0, 5).forEach(cid => {
-      const page = timelineState.allPages.find(p => p.id === cid);
-      if (page) {
-        const initials = getInitials(page.title);
-        const bg = avatarColor(cid);
-        if (page.coverImage) {
-          footerHTML += `<span class="stc-avatar stc-avatar-link" data-page-id="${cid}" style="background-image:url('${page.coverImage}'); background-size:cover; background-position:center; cursor:pointer;" title="Open: ${esc(page.title)}"></span>`;
-        } else {
-          footerHTML += `<span class="stc-avatar stc-avatar-link" data-page-id="${cid}" style="background:${bg}; cursor:pointer;" title="Open: ${esc(page.title)}">${esc(initials)}</span>`;
+    if (isNew || card.dataset.fingerprint !== fingerprint) {
+      card.dataset.fingerprint = fingerprint;
+
+      // Build footer
+      let footerHTML = '';
+      charIds.slice(0, 5).forEach(cid => {
+        const page = timelineState.allPages.find(p => p.id === cid);
+        if (page) {
+          const initials = getInitials(page.title);
+          const bg = avatarColor(cid);
+          if (page.coverImage) {
+            footerHTML += `<span class="stc-avatar stc-avatar-link" data-page-id="${cid}" style="background-image:url('${page.coverImage}'); background-size:cover; background-position:center; cursor:pointer;" title="Open: ${esc(page.title)}"></span>`;
+          } else {
+            footerHTML += `<span class="stc-avatar stc-avatar-link" data-page-id="${cid}" style="background:${bg}; cursor:pointer;" title="Open: ${esc(page.title)}">${esc(initials)}</span>`;
+          }
         }
-      }
-    });
-    if (charIds.length > 5) {
-      footerHTML += `<span class="stc-avatar" style="background:rgba(255,255,255,0.1);">+${charIds.length - 5}</span>`;
-    }
-    if (prereqCount > 0) {
-      footerHTML += `<span class="stc-prereq-badge" title="Prerequisites">⟶ ${prereqCount}</span>`;
-    }
-
-    card.innerHTML = `
-      <div class="stc-card-header">
-        <span class="stc-card-title" title="${esc(beat.title)}">${esc(beat.title)}</span>
-        <div style="display:flex;gap:3px;align-items:center;">
-          <button class="stc-card-canvas-btn" title="Open beat canvas" tabindex="-1" style="background:transparent;border:none;cursor:pointer;padding:2px 4px;border-radius:4px;font-size:12px;line-height:1;opacity:0.6;transition:opacity 0.15s,background 0.15s;" onmouseenter="this.style.opacity='1';this.style.background='rgba(255,255,255,0.08)'" onmouseleave="this.style.opacity='0.6';this.style.background='transparent'">🎨</button>
-        </div>
-      </div>
-      <div class="stc-card-body">${esc(beat.content || 'No synopsis.')}</div>
-      <div class="stc-card-footer">${footerHTML}</div>
-    `;
-
-    card.querySelector('.stc-card-canvas-btn').addEventListener('click', e => {
-      e.stopPropagation();
-      openBeatCanvas(beat);
-    });
-
-    // Avatar chip clicks → navigate to that page
-    card.querySelectorAll('.stc-avatar-link').forEach(chip => {
-      chip.addEventListener('click', e => {
-        e.stopPropagation();
-        navigate(`page/${chip.dataset.pageId}`);
       });
-    });
+      if (charIds.length > 5) {
+        footerHTML += `<span class="stc-avatar" style="background:rgba(255,255,255,0.1);">+${charIds.length - 5}</span>`;
+      }
+      if (prereqCount > 0) {
+        footerHTML += `<span class="stc-prereq-badge" title="Prerequisites">⟶ ${prereqCount}</span>`;
+      }
 
-    card.addEventListener('dblclick', () => openBeatCanvas(beat));
+      if (isCompact) {
+        card.innerHTML = `
+          <span style="font-size: 0.8rem; margin-right: 4px; display: inline-block; vertical-align: middle;">${lane.icon}</span>
+          <span class="stc-card-title" style="font-size: 0.65rem; text-align: center; display: inline-block; vertical-align: middle; margin: 0;" title="${esc(beat.title)}">${esc(beat.title)}</span>
+        `;
+      } else {
+        card.innerHTML = `
+          <div class="stc-card-header">
+            <span class="stc-card-title" title="${esc(beat.title)}">${esc(beat.title)}</span>
+            <div style="display:flex;gap:3px;align-items:center;">
+              <button class="stc-card-canvas-btn" title="Open beat canvas" tabindex="-1" style="background:transparent;border:none;cursor:pointer;padding:2px 4px;border-radius:4px;font-size:12px;line-height:1;opacity:0.6;transition:opacity 0.15s,background 0.15s;" onmouseenter="this.style.opacity='1';this.style.background='rgba(255,255,255,0.08)'" onmouseleave="this.style.opacity='0.6';this.style.background='transparent'">🎨</button>
+            </div>
+          </div>
+          <div class="stc-card-body">${esc(plainText)}</div>
+          <div class="stc-card-footer">${footerHTML}</div>
+        `;
 
-    card.addEventListener('contextmenu', e => {
-      e.preventDefault();
-      openContextMenu(e, beat, card, lane);
-    });
+        card.querySelector('.stc-card-canvas-btn').addEventListener('click', e => {
+          e.stopPropagation();
+          openBeatCanvas(beat);
+        });
 
-    setupCardDrag(card, beat);
-    timelineState.cardLayer.appendChild(card);
+        // Avatar chip clicks → navigate to that page
+        card.querySelectorAll('.stc-avatar-link').forEach(chip => {
+          chip.addEventListener('click', e => {
+            e.stopPropagation();
+            navigate(`page/${chip.dataset.pageId}`);
+          });
+        });
+      }
+    }
+
+    if (isNew) {
+      // Hover glow
+      card.addEventListener('mouseenter', () => {
+        card.style.boxShadow = `0 8px 32px rgba(0,0,0,0.4), 0 0 14px ${lane.color}30, inset 0 0 0 1px ${lane.color}20`;
+        card.style.borderColor = `${lane.color}80`;
+      });
+      card.addEventListener('mouseleave', () => {
+        if (!card.classList.contains('stc-card-dragging')) {
+          card.style.boxShadow = '';
+          card.style.borderColor = 'rgba(255,255,255,0.07)';
+          card.style.borderLeft = `4px solid ${lane.color}`;
+        }
+      });
+
+      card.addEventListener('dblclick', () => openBeatCanvas(beat));
+
+      card.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        openContextMenu(e, beat, card, lane);
+      });
+
+      setupCardDrag(card, beat);
+      timelineState.cardLayer.appendChild(card);
+    }
   });
+
+  // Remove cards that are no longer visible
+  for (const bid in existingCards) {
+    if (!processedIds.has(bid)) {
+      existingCards[bid].remove();
+    }
+  }
 }
 
 // ─── Drag ────────────────────────────────────────────────────────────────────
@@ -1103,6 +1695,7 @@ function setupCardDrag(card, beat) {
   let clientStartX, clientStartY;
   let clickTimeout = null;
   let lastClickTime = 0;
+  let prevFocusedLane = null; // lane focus before drag started
 
   const onMouseDown = e => {
     if (e.target.closest('button') || e.target.closest('.stc-avatar')) return;
@@ -1113,8 +1706,9 @@ function setupCardDrag(card, beat) {
     }
     isDown = true;
     hasMoved = false;
-    startBeatX = beat.properties.x;
-    startBeatY = getLaneY(beat.properties.lane);
+    prevFocusedLane = timelineState.focusedLane; // snapshot before drag
+    startBeatX = getRenderX(beat.properties.x, timelineState.collapsedActs);
+    startBeatY = parseFloat(card.style.top) || 0;
     clientStartX = e.clientX;
     clientStartY = e.clientY;
     e.preventDefault();
@@ -1132,15 +1726,19 @@ function setupCardDrag(card, beat) {
     }
 
     if (hasMoved) {
-      let newX = Math.max(10, Math.round((startBeatX + dx) / SNAP_GRID_X) * SNAP_GRID_X);
+      let newRenderX = Math.max(10, Math.round((startBeatX + dx) / SNAP_GRID_X) * SNAP_GRID_X);
       const newY = startBeatY + dy;
 
-      card.style.left = `${newX}px`;
+      const tempLane = getLaneFromY(newY);
+      beat.properties.lane = tempLane;
+
+      card.style.left = `${newRenderX}px`;
       card.style.top  = `${newY}px`;
 
-      beat.properties.x = newX;
-      const tempLane = Math.max(0, Math.min(2, Math.round((newY - LANE_PADDING) / LANE_HEIGHT)));
-      beat.properties.lane = tempLane;
+      beat.properties.x = getLogicalX(newRenderX, timelineState.collapsedActs);
+
+      const lane = LANES[tempLane] || LANES[0];
+      card.style.borderLeft = `4px solid ${lane.color}`;
 
       drawConnections();
       updateMinimap();
@@ -1155,18 +1753,67 @@ function setupCardDrag(card, beat) {
       card.classList.remove('stc-card-dragging');
       card.style.zIndex = '';
 
-      const finalY  = parseFloat(card.style.top) || getLaneY(0);
-      const laneIdx = Math.max(0, Math.min(2, Math.round((finalY - LANE_PADDING) / LANE_HEIGHT)));
+      const finalY  = parseFloat(card.style.top) || 0;
+      const laneIdx = getLaneFromY(finalY);
       beat.properties.lane = laneIdx;
-      card.style.top = `${getLaneY(laneIdx)}px`;
+
+      // Capture laneY BEFORE updating focusedLane so relativeY is
+      // computed against the current (pre-focus-change) lane geometry.
+      // finalY was recorded with the old geometry, so this keeps them in sync.
+      const laneY = getLaneY(laneIdx);
+      const relativeY = finalY - laneY;
+
+      // Auto-focus the destination lane
+      timelineState.focusedLane = laneIdx;
+      localStorage.setItem(`forge-timeline-focused-lane-${timelineState.project.id}`, timelineState.focusedLane !== null ? timelineState.focusedLane : '');
+
+      const isExpanded = timelineState.expandedCardId === beat.id;
+
+      // Snapped Y coordinate constraint
+      const maxOffset = isExpanded ? (380 - CARD_H) : (380 - 38);
+      const snappedY = Math.max(0, Math.min(maxOffset, Math.round(relativeY / 10) * 10));
+      beat.properties.yOffset = snappedY;
+      card.style.top = `${laneY + snappedY}px`;
+
+      let finalRenderX = parseFloat(card.style.left) || 80;
+      finalRenderX = Math.max(10, Math.round(finalRenderX / SNAP_GRID_X) * SNAP_GRID_X);
+
+      const finalLogicalX = getLogicalX(finalRenderX, timelineState.collapsedActs);
+      beat.properties.x = finalLogicalX;
+
+      card.style.left = `${finalRenderX}px`;
 
       const lane = LANES.find(l => l.id === laneIdx) || LANES[0];
       card.style.borderLeft = `4px solid ${lane.color}`;
 
+      // Two-way sync: Dragging to a new Act updates f1 (Act dropdown)
+      const isStory = timelineState.project?.settings?.style === 'story';
+      if (isStory) {
+        const newAct = getActFromX(finalLogicalX);
+        const currentAct = getActName(beat);
+        if (newAct !== currentAct) {
+          beat.properties.f1 = getActDefaultFieldVal(newAct);
+        }
+      }
+
+      // Disabled overlap nudging to keep cards exactly where dropped and prevent page blinking
+      // nudgeLaneOverlaps(laneIdx, beat.id);
+
+      timelineState.justSavedId = beat.id;
       await savePage(beat);
       playClickSound();
-      drawConnections();
-      updateMinimap();
+
+      const focusLaneChanged = prevFocusedLane !== timelineState.focusedLane;
+
+      if (focusLaneChanged) {
+        // Lane focus changed → heights need rebuilding; full board refresh required
+        refreshBoard();
+      } else {
+        // Same lane or same focus → card is already positioned correctly in-place.
+        // Just redraw connections and minimap to avoid flicker.
+        drawConnections();
+        updateMinimap();
+      }
     } else {
       const now = Date.now();
       if (now - lastClickTime < 200) {
@@ -1178,7 +1825,14 @@ function setupCardDrag(card, beat) {
         lastClickTime = now;
         clickTimeout = setTimeout(() => {
           clickTimeout = null;
-          openEditModal(beat);
+          if (timelineState.expandedCardId === beat.id) {
+            timelineState.expandedCardId = null;
+          } else {
+            timelineState.expandedCardId = beat.id;
+          }
+          renderBeats();
+          drawConnections();
+          updateMinimap();
         }, 200);
       }
     }
@@ -1207,15 +1861,55 @@ function drawConnections() {
   `;
   svg.appendChild(defs);
 
+  const collapsed = timelineState.collapsedActs || {};
+
+  // getActRenderMidX: returns the horizontal mid-point of a collapsed act's column (80px wide).
+  // Computed by summing prior acts' actual render widths, then adding 40 (half of 80px).
+  const getActRenderMidX = (act) => {
+    const w1 = collapsed['ACT I']    ? 80 : 700;
+    const w2 = collapsed['ACT II']   ? 80 : 700;
+    const w3 = collapsed['ACT III']  ? 80 : 700;
+    if (act === 'ACT I')    return 0  + 40;        // starts at 0
+    if (act === 'ACT II')   return w1 + 40;
+    if (act === 'ACT III')  return w1 + w2 + 40;
+    return w1 + w2 + w3 + 40;                      // EPILOGUE
+  };
+
   timelineState.beats.forEach(beat => {
     (beat.properties.prerequisites || []).forEach(preId => {
       const source = timelineState.beats.find(b => b.id === preId);
       if (!source) return;
 
-      const x1 = source.properties.x + CARD_W;
-      const y1 = getLaneY(source.properties.lane) + CARD_H / 2;
-      const x2 = beat.properties.x;
-      const y2 = getLaneY(beat.properties.lane) + CARD_H / 2;
+      const actName1 = getActName(source);
+      const actName2 = getActName(beat);
+      const collapsed1 = collapsed[actName1];
+      const collapsed2 = collapsed[actName2];
+
+      // If both acts are collapsed, hide the link line entirely
+      if (collapsed1 && collapsed2) return;
+
+      const geom1 = getCardVisualGeometry(source);
+      const geom2 = getCardVisualGeometry(beat);
+
+      let x1, y1, x2, y2;
+
+      if (collapsed1) {
+        // Source act is collapsed: anchor line to the center of the collapsed column
+        x1 = getActRenderMidX(actName1);
+        y1 = getLaneY(source.properties.lane) + getLaneHeight(source.properties.lane) / 2;
+      } else {
+        x1 = geom1.x + geom1.w;
+        y1 = geom1.y + geom1.h / 2;
+      }
+
+      if (collapsed2) {
+        // Target act is collapsed: anchor line to the center of the collapsed column
+        x2 = getActRenderMidX(actName2);
+        y2 = getLaneY(beat.properties.lane) + getLaneHeight(beat.properties.lane) / 2;
+      } else {
+        x2 = geom2.x;
+        y2 = geom2.y + geom2.h / 2;
+      }
 
       const dx = x2 - x1;
       const cp = Math.max(60, Math.abs(dx) * 0.45);
@@ -1234,14 +1928,27 @@ function drawConnections() {
       path.addEventListener('mouseleave', () => {
         path.setAttribute('marker-end', 'url(#stc-arrow)');
       });
-      path.addEventListener('dblclick', async e => {
+      path.addEventListener('dblclick', e => {
         e.stopPropagation();
-        if (confirm(`Remove prerequisite link from "${source.title}" → "${beat.title}"?`)) {
+        // 1a: 2-step pill confirm — no window.confirm()
+        const existing = document.querySelector('.stc-link-confirm-pill');
+        if (existing) { existing.remove(); return; }
+        const pill = document.createElement('div');
+        pill.className = 'stc-link-confirm-pill';
+        pill.style.cssText = `position:fixed; left:${e.clientX + 10}px; top:${e.clientY - 10}px; background:rgba(244,63,94,0.15); border:1px solid rgba(244,63,94,0.4); border-radius:20px; padding:5px 12px; font-size:0.72rem; color:#f87171; font-family:var(--font-hud,monospace); z-index:99999; cursor:pointer; backdrop-filter:blur(8px); white-space:nowrap; animation:stc-ctx-in 0.12s ease both;`;
+        pill.textContent = '⚠ Remove link? Click to confirm';
+        document.body.appendChild(pill);
+        const cleanup = () => pill.remove();
+        const confirmTimer = setTimeout(cleanup, 2500);
+        pill.addEventListener('click', async () => {
+          clearTimeout(confirmTimer);
+          cleanup();
           beat.properties.prerequisites = (beat.properties.prerequisites || []).filter(id => id !== source.id);
           await savePage(beat);
           drawConnections();
           playZapSound();
-        }
+        });
+        setTimeout(() => document.addEventListener('click', cleanup, { once: true }), 50);
       });
 
       svg.appendChild(path);
@@ -1265,7 +1972,55 @@ function buildMinimap() {
   vp.id = 'stc-minimap-viewport';
   mm.appendChild(vp);
 
+  // 1d: Click-to-scroll on minimap
+  let mmDragging = false;
+  const scrollToMmX = (clientX) => {
+    const scroll = timelineState.boardScroll;
+    if (!scroll) return;
+    const rect = mm.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const collapsed = timelineState.collapsedActs || {};
+    const w1 = collapsed['ACT I'] ? 80 : 700;
+    const w2 = collapsed['ACT II'] ? 80 : 700;
+    const w3 = collapsed['ACT III'] ? 80 : 700;
+    const w4 = collapsed['EPILOGUE'] ? 80 : 900;
+    const totalW = w1 + w2 + w3 + w4 + 240;
+    scroll.scrollLeft = ratio * (totalW - scroll.clientWidth);
+  };
+  mm.addEventListener('mousedown', (e) => { mmDragging = true; scrollToMmX(e.clientX); });
+  mm.addEventListener('mousemove', (e) => { if (mmDragging) scrollToMmX(e.clientX); });
+  window.addEventListener('mouseup', () => { mmDragging = false; });
+
   return mm;
+}
+
+// 1e: Nudge overlapping cards within a focused lane after drop
+function nudgeLaneOverlaps(laneIdx, droppedBeatId) {
+  if (timelineState.focusedLane !== laneIdx) return;
+  const beatsInLane = timelineState.beats
+    .filter(b => b.properties.lane === laneIdx)
+    .sort((a, b) => (a.properties.yOffset || 0) - (b.properties.yOffset || 0));
+
+  const isExpanded = (b) => timelineState.expandedCardId === b.id;
+  const cardH = (b) => isExpanded(b) ? CARD_H : 38;
+  const gap = 12;
+
+  let cursor = 0;
+  for (const b of beatsInLane) {
+    const currentY = b.properties.yOffset || 0;
+    if (currentY < cursor) {
+      b.properties.yOffset = cursor;
+      // Save async quietly (don't block)
+      savePage(b).catch(() => {});
+      // Update card DOM position if visible
+      const cardEl = timelineState.cardLayer?.querySelector(`[data-beat-id="${b.id}"]`);
+      if (cardEl) {
+        const laneY = getLaneY(laneIdx);
+        cardEl.style.top = `${laneY + cursor}px`;
+      }
+    }
+    cursor = Math.max(cursor, (b.properties.yOffset || 0)) + cardH(b) + gap;
+  }
 }
 
 function updateMinimap() {
@@ -1274,6 +2029,13 @@ function updateMinimap() {
   const scroll  = timelineState.boardScroll;
   if (!canvas || !vp || !scroll) return;
 
+  const collapsed = timelineState.collapsedActs || {};
+  const w1 = collapsed['ACT I'] ? 80 : 700;
+  const w2 = collapsed['ACT II'] ? 80 : 700;
+  const w3 = collapsed['ACT III'] ? 80 : 700;
+  const w4 = collapsed['EPILOGUE'] ? 80 : 900;
+  const currentSurfaceW = w1 + w2 + w3 + w4;
+
   const mmEl    = canvas.parentElement;
   const mmW     = mmEl.clientWidth;
   const mmH     = mmEl.clientHeight;
@@ -1281,8 +2043,8 @@ function updateMinimap() {
   canvas.height = mmH;
 
   const ctx     = canvas.getContext('2d');
-  const scaleX  = mmW / (SURFACE_W + 200);  // +200 for sidebar
-  const scaleY  = mmH / SURFACE_H;
+  const scaleX  = mmW / (currentSurfaceW + 240);  // +240 for sidebar
+  const scaleY  = mmH / getSurfaceHeight();
 
   ctx.clearRect(0, 0, mmW, mmH);
 
@@ -1290,17 +2052,21 @@ function updateMinimap() {
   LANES.forEach(lane => {
     ctx.fillStyle = `${lane.color}12`;
     const ly = getLaneY(lane.id) * scaleY;
-    ctx.fillRect(0, ly, mmW, LANE_HEIGHT * scaleY);
+    ctx.fillRect(0, ly, mmW, getLaneHeight(lane.id) * scaleY);
   });
 
   // Beat dots
   const q = timelineState.searchQuery;
   timelineState.beats.forEach(beat => {
-    const lane = LANES.find(l => l.id === beat.properties.lane) || LANES[0];
-    const visible = !q || (beat.title || '').toLowerCase().includes(q) || (beat.content || '').toLowerCase().includes(q);
+    const rx = getRenderX(beat.properties.x, collapsed);
+    if (rx < 0) return; // Skip if collapsed/hidden
 
-    const dotX = (beat.properties.x + 200) * scaleX;
-    const dotY = (getLaneY(beat.properties.lane) + CARD_H / 2) * scaleY;
+    const lane = LANES.find(l => l.id === beat.properties.lane) || LANES[0];
+    const visible = !q || (beat.title || '').toLowerCase().includes(q) || extractPlainText(beat.content).toLowerCase().includes(q);
+
+    const dotX = (rx + 240) * scaleX;
+    const geom = getCardVisualGeometry(beat);
+    const dotY = (geom.y + geom.h / 2) * scaleY;
 
     ctx.beginPath();
     ctx.arc(dotX, dotY, visible ? 3.5 : 2, 0, Math.PI * 2);
@@ -1372,7 +2138,7 @@ function openEditModal(beat) {
   overlay.className = 'stc-modal-overlay';
 
   const otherBeats = timelineState.beats.filter(b => b.id !== beat.id);
-  const charPages  = timelineState.allPages.filter(p => p.schemaId);
+  const charPages  = timelineState.allPages.filter(p => p.schemaId && p.schemaId !== beat.schemaId && !p.isStoryBeat);
 
   const prereqsHTML = otherBeats.length
     ? otherBeats.map(ob => {
@@ -1418,7 +2184,7 @@ function openEditModal(beat) {
       </div>
       <div class="stc-modal-field">
         <label class="stc-modal-label">Synopsis / Description</label>
-        <textarea class="stc-modal-textarea" id="stc-edit-content">${esc(beat.content || '')}</textarea>
+        <textarea class="stc-modal-textarea" id="stc-edit-content">${esc(extractPlainText(beat.content || ''))}</textarea>
       </div>
       <div class="stc-modal-field">
         <label class="stc-modal-label">Prerequisites</label>
@@ -1453,8 +2219,24 @@ function openEditModal(beat) {
   modal.querySelector('.stc-modal-close').addEventListener('click', () => closeEditModal());
   modal.querySelector('.stc-modal-cancel').addEventListener('click', () => closeEditModal());
 
-  modal.querySelector('#stc-edit-delete').addEventListener('click', async () => {
-    if (confirm(`Delete story beat "${beat.title}"?`)) {
+  // 1a: 2-step delete confirm — no window.confirm()
+  const deleteBtn = modal.querySelector('#stc-edit-delete');
+  let deleteConfirmPending = false;
+  let deleteResetTimer = null;
+  deleteBtn.addEventListener('click', async () => {
+    if (!deleteConfirmPending) {
+      deleteConfirmPending = true;
+      deleteBtn.textContent = '⚠ Confirm Delete?';
+      deleteBtn.style.background = 'rgba(244,63,94,0.25)';
+      deleteBtn.style.borderColor = 'rgba(244,63,94,0.6)';
+      deleteResetTimer = setTimeout(() => {
+        deleteConfirmPending = false;
+        deleteBtn.textContent = '🗑 Delete Beat';
+        deleteBtn.style.background = '';
+        deleteBtn.style.borderColor = '';
+      }, 2000);
+    } else {
+      clearTimeout(deleteResetTimer);
       await deleteBeat(beat);
       closeEditModal();
     }
@@ -1462,8 +2244,16 @@ function openEditModal(beat) {
 
   modal.querySelector('#stc-edit-save').addEventListener('click', async () => {
     beat.title   = modal.querySelector('#stc-edit-title').value.trim() || 'Untitled Beat';
-    beat.content = modal.querySelector('#stc-edit-content').value;
-    beat.properties.lane = parseInt(modal.querySelector('#stc-edit-lane').value);
+    const newContent = modal.querySelector('#stc-edit-content').value;
+    if (newContent !== extractPlainText(beat.content)) {
+      beat.content = newContent;
+    }
+    
+    const newLane = parseInt(modal.querySelector('#stc-edit-lane').value);
+    if (newLane !== beat.properties.lane) {
+      beat.properties.lane = newLane;
+      beat.properties.yOffset = 0; // reset yOffset on lane change from modal
+    }
 
     const prereqIds = [];
     modal.querySelectorAll('#stc-prereqs input:checked').forEach(cb => prereqIds.push(cb.dataset.beatId));
@@ -1497,13 +2287,25 @@ async function createNewBeat() {
     if (b.properties.x > maxX) maxX = b.properties.x;
   });
 
+  const styleId = timelineState.project?.settings?.style || 'story';
+  const storySchemaId = styleId === 'story' ? 'story-chapters-schema' : undefined;
+  const defaultStoryProps = styleId === 'story' ? {
+    f1: 'Act I',
+    f2: 'Draft',
+    f3: 0,
+    f4: '',
+    f5: '',
+    f6: ''
+  } : {};
+
   const newBeat = {
     id: generateId(),
     projectId: timelineState.project.id,
     title: 'New Story Beat',
     content: 'Briefly describe this narrative beat…',
     isStoryBeat: true,
-    properties: { lane: 0, x: maxX + 320, prerequisites: [], characters: [] }
+    schemaId: storySchemaId,
+    properties: { lane: 0, x: maxX + 320, prerequisites: [], characters: [], ...defaultStoryProps }
   };
 
   await savePage(newBeat);
@@ -1530,11 +2332,19 @@ async function duplicateBeat(beat) {
     title: beat.title + ' (Copy)',
     content: beat.content,
     isStoryBeat: true,
+    schemaId: beat.schemaId,
     properties: {
       lane: beat.properties.lane,
       x: beat.properties.x + 320,
       prerequisites: [...(beat.properties.prerequisites || [])],
-      characters: [...(beat.properties.characters || [])]
+      characters: [...(beat.properties.characters || [])],
+      // Copy schema properties if they exist
+      f1: beat.properties.f1 || 'Act I',
+      f2: beat.properties.f2 || 'Draft',
+      f3: beat.properties.f3 || 0,
+      f4: beat.properties.f4 || '',
+      f5: beat.properties.f5 || '',
+      f6: beat.properties.f6 || ''
     }
   };
   await savePage(dupe);

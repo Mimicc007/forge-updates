@@ -1,5 +1,36 @@
 [
   {
+    "version": "v0.2.0-alpha",
+    "date": "2026-07-16",
+    "title": "Forge V2.0 - Cinematic Rewrite & Desktop Windows Support",
+    "type": "major",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.2.0-alpha/Forge-Setup-0.2.0-alpha.exe",
+    "changes": [
+      "Added desktop title bar supporting dragging and double-click minimize/maximize window controls",
+      "Redesigned Page View editor with a dynamic full-bleed layout and sidebar properties shift",
+      "Resolved relationship graph physics: neighbor nodes spring dynamically based on drag velocity",
+      "Fixed story timeline beat sheet drops, eliminating node flickering using DOM reconciliation/diffing",
+      "Added automated Story Roadmap sync when creating Chapters & Scenes database entries",
+      "Polished Zen Mode with a background color customizer, font size stepper, and hover tooltips",
+      "Fixed cover image dimensions to fully scale to 100% bleed width and height",
+      "Corrected the page icon picker crash caused by reference errors"
+    ]
+  },
+  {
+    "version": "v0.1.8-alpha",
+    "date": "2026-06-15",
+    "title": "Story Writer Beat Sheet & Onboarding Tour Update",
+    "type": "patch",
+    "downloadUrl": "https://github.com/Mimicc007/forge-updates/releases/download/v0.1.8-alpha/Forge-Setup-0.1.8-alpha.exe",
+    "changes": [
+      "Added interactive Outline Beat Sheet node type exclusively for the Story Writer preset",
+      "Features Three-Act Structure, Save the Cat!, and Hero's Journey story planning templates",
+      "Fixed on-boarding tutorial routing blocks for Ignis Companion and Scene Mode drawer panels",
+      "Completed visual guide redesign for Phase 9 (Infinite Canvas) to directly highlight and auto-spawn canvas nodes",
+      "Polished drawer mutually exclusive open state animations and local update loops"
+    ]
+  },
+  {
     "version": "v0.1.7-alpha",
     "date": "2026-06-14",
     "title": "Map Pins Resize & Ollama Integration Patch",

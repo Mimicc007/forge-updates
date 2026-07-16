@@ -6,7 +6,7 @@
 import { openDB, deleteDB } from 'idb';
 
 const DB_NAME = 'forge-db';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let dbPromise = null;
 
@@ -63,6 +63,19 @@ function getDB() {
             const nodeStore = db.createObjectStore('nodes', { keyPath: 'id' });
             nodeStore.createIndex('tabId', 'tabId');
           }
+        }
+
+        // v5: Activity log + tags multiEntry index on pages
+        if (oldVersion < 5) {
+          if (!db.objectStoreNames.contains('activity')) {
+            const actStore = db.createObjectStore('activity', { keyPath: 'id' });
+            actStore.createIndex('projectId', 'projectId');
+            actStore.createIndex('timestamp', 'timestamp');
+          }
+          // Tags multiEntry index — enables getPagesByTag() fast lookup
+          // Note: pages store already exists, we just add the index
+          // We can't add an index via the transaction in this way for existing stores in some browsers
+          // So we'll handle tag filtering in JS instead (see searchPages upgrade)
         }
       },
     }).catch(err => {
@@ -441,6 +454,7 @@ export async function savePage(page) {
     }
   }
 
+  const isNew = !page.createdAt || page.createdAt === page.updatedAt;
   await put('pages', page);
   
   try {
@@ -448,6 +462,15 @@ export async function savePage(page) {
   } catch (err) {
     console.error('Failed to update page links:', err);
   }
+
+  // Log activity (non-blocking)
+  logActivity(
+    page.projectId,
+    isNew ? 'created' : 'edited',
+    page.id,
+    page.title,
+    page.schemaId
+  ).catch(() => {});
   
   return page; // Return the full object, not just the key
 }
@@ -472,7 +495,17 @@ export async function deletePage(id) {
   }
   
   await tx.done;
-  
+
+  const page = await getById('pages', id);
+  if (page) {
+    logActivity(
+      page.projectId,
+      'deleted',
+      page.id,
+      page.title,
+      page.schemaId
+    ).catch(() => {});
+  }
   return deleteById('pages', id);
 }
 
@@ -507,20 +540,122 @@ export async function deleteLink(id) {
 // Search & Global
 // ==========================================
 
-export async function searchPages(projectId, query) {
-  if (!query || query.length < 2) return [];
-  const q = query.toLowerCase();
+export async function searchPages(projectId, query, options = {}) {
+  if (!query || query.length < 1) return [];
+  const q = query.toLowerCase().trim();
+  const { schemaId, limit = 20, includeContent = true } = options;
   
   const pages = await getPages(projectId);
-  const results = [];
+  const scored = [];
   
   for (const p of pages) {
-    if (p.title && p.title.toLowerCase().includes(q)) {
-      results.push(p);
+    if (schemaId && p.schemaId !== schemaId) continue;
+    
+    let score = 0;
+    const title = (p.title || '').toLowerCase();
+    
+    // Title match scores highest
+    if (title === q) score += 10;
+    else if (title.startsWith(q)) score += 6;
+    else if (title.includes(q)) score += 3;
+    
+    // Content match
+    if (includeContent && p.content) {
+      let contentText = p.content;
+      // Strip Quill delta JSON to plain text
+      if (contentText.startsWith('{')) {
+        try {
+          const delta = JSON.parse(contentText);
+          if (delta.ops) {
+            contentText = delta.ops
+              .filter(op => typeof op.insert === 'string')
+              .map(op => op.insert)
+              .join('');
+          }
+        } catch (_) {}
+      }
+      // Strip HTML tags
+      contentText = contentText.replace(/<[^>]+>/g, ' ').toLowerCase();
+      if (contentText.includes(q)) score += 1;
     }
+    
+    // Tag match
+    if (p.tags && Array.isArray(p.tags)) {
+      if (p.tags.some(t => t.toLowerCase().includes(q))) score += 2;
+    }
+    
+    // Properties match
+    if (p.properties) {
+      for (const val of Object.values(p.properties)) {
+        if (typeof val === 'string' && val.toLowerCase().includes(q)) {
+          score += 1;
+          break;
+        }
+      }
+    }
+    
+    if (score > 0) scored.push({ ...p, _score: score });
   }
   
-  return results.slice(0, 20);
+  return scored
+    .sort((a, b) => b._score - a._score)
+    .slice(0, limit)
+    .map(({ _score, ...p }) => p);
+}
+
+// ==========================================
+// Activity Log (V5)
+// ==========================================
+
+const MAX_ACTIVITY_ENTRIES = 200;
+
+export async function logActivity(projectId, action, pageId, pageTitle, schemaId = null) {
+  try {
+    const db = await getDB();
+    const entry = {
+      id: generateId(),
+      projectId,
+      action, // 'created' | 'edited' | 'deleted'
+      pageId,
+      pageTitle: pageTitle || 'Untitled',
+      schemaId: schemaId || null,
+      timestamp: new Date().toISOString()
+    };
+    await db.put('activity', entry);
+    
+    // Prune to MAX_ACTIVITY_ENTRIES
+    const allEntries = await db.getAllFromIndex('activity', 'projectId', projectId);
+    if (allEntries.length > MAX_ACTIVITY_ENTRIES) {
+      const sorted = allEntries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      const toDelete = sorted.slice(0, allEntries.length - MAX_ACTIVITY_ENTRIES);
+      const tx = db.transaction('activity', 'readwrite');
+      for (const e of toDelete) tx.store.delete(e.id);
+      await tx.done;
+    }
+  } catch (err) {
+    // Non-fatal: activity log failure should not break saves
+    console.warn('Failed to log activity:', err);
+  }
+}
+
+export async function getRecentActivity(projectId, limit = 20) {
+  try {
+    const db = await getDB();
+    const entries = await db.getAllFromIndex('activity', 'projectId', projectId);
+    return entries
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, limit);
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function getPagesByTag(projectId, tag) {
+  const pages = await getPages(projectId);
+  const t = tag.toLowerCase();
+  return pages.filter(p => 
+    p.tags && Array.isArray(p.tags) && p.tags.some(pt => pt.toLowerCase() === t)
+  );
 }
 
 // ==========================================
@@ -592,14 +727,15 @@ export async function exportUniversalData() {
     links: await db.getAll('links'),
     images: await db.getAll('images'),
     tabs: await db.getAll('tabs'),
-    nodes: await db.getAll('nodes')
+    nodes: await db.getAll('nodes'),
+    activity: await db.getAll('activity')
   };
 }
 
 export async function importUniversalData(data) {
   await clearDatabase();
   const db = await getDB();
-  const stores = ['projects', 'schemas', 'pages', 'links', 'images', 'tabs', 'nodes'];
+  const stores = ['projects', 'schemas', 'pages', 'links', 'images', 'tabs', 'nodes', 'activity'];
   for (const storeName of stores) {
     if (data[storeName]) {
       const tx = db.transaction(storeName, 'readwrite');
@@ -613,7 +749,7 @@ export async function importUniversalData(data) {
 
 export async function clearDatabase() {
   const db = await getDB();
-  const stores = ['projects', 'schemas', 'pages', 'links', 'images', 'tabs', 'nodes'];
+  const stores = ['projects', 'schemas', 'pages', 'links', 'images', 'tabs', 'nodes', 'activity'];
   const tx = db.transaction(stores, 'readwrite');
   for (const storeName of stores) {
     tx.objectStore(storeName).clear();

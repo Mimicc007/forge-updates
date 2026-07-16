@@ -15,7 +15,7 @@
    are detected so the sidebar can show a notification badge.
    ============================================================ */
 
-import { getActiveProject, getPages, getSchemas } from './db.js';
+import { getActiveProject, getPages, getSchemas, getAllTabs, getAllNodes } from './db.js';
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -102,6 +102,19 @@ export async function runContinuityScan(silent = true) {
     } else {
       // Lightweight rule-based heuristics (no AI required)
       issues = performRuleBasedScan(pages);
+    }
+
+    // Always run static structural plot hole checks for story style preset
+    const styleId = project.settings?.style || 'story';
+    if (styleId === 'story') {
+      try {
+        const allNodes = await getAllNodes();
+        const tabs = await getAllTabs();
+        const plotHoles = checkPlotHoles(pages, schemas, tabs, allNodes);
+        issues = issues.concat(plotHoles);
+      } catch (err) {
+        console.error('[ContinuityMonitor] Static plot hole check failed:', err);
+      }
     }
 
     localStorage.setItem('forge-continuity-last-scan-hash', contentHash);
@@ -386,7 +399,7 @@ function performRuleBasedScan(pages) {
   // Orphaned pages: exist but are never linked from anywhere
   pages.forEach(p => {
     // Skip story beats and system pages
-    if (p.isStoryBeat) return;
+    if (p.isStoryBeat || p.schemaId === 'story-chapters-schema') return;
     if (!p.title || p.title.trim() === '') return;
 
     const titleLower = (p.title || '').toLowerCase().trim();
@@ -406,7 +419,7 @@ function performRuleBasedScan(pages) {
   });
 
   // Dead-end story beats: beats with no successors (no other beat lists this as a prerequisite)
-  const beats = pages.filter(p => p.isStoryBeat === true);
+  const beats = pages.filter(p => p.isStoryBeat === true || p.schemaId === 'story-chapters-schema');
   if (beats.length > 1) {
     const beatIdsUsedAsPrereqs = new Set(
       beats.flatMap(b => b.properties?.prerequisites || [])
@@ -430,6 +443,218 @@ function performRuleBasedScan(pages) {
       }
     });
   }
+
+  return issues;
+}
+
+function checkPlotHoles(pages, schemas, tabs, allNodes) {
+  const issues = [];
+  const now = new Date().toISOString();
+  const generateIssueId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  // 1. TIMELINE PRE-REQUISITE ORDER CONFLICT
+  const beats = pages.filter(p => p.isStoryBeat === true || p.schemaId === 'story-chapters-schema').sort((a, b) => (a.properties?.x || 0) - (b.properties?.x || 0));
+  const beatIndexMap = new Map();
+  beats.forEach((b, idx) => beatIndexMap.set(b.id, idx));
+
+  beats.forEach((beat, idx) => {
+    const prereqs = beat.properties?.prerequisites || [];
+    prereqs.forEach(preId => {
+      const preIdx = beatIndexMap.get(preId);
+      if (preIdx !== undefined && preIdx >= idx) {
+        const preBeat = beats[preIdx];
+        issues.push({
+          id: generateIssueId() + 'pr',
+          type: 'BROKEN_PREREQ',
+          severity: 'high',
+          description: `Timeline Prerequisite Conflict: "${beat.title || 'Untitled'}" requires "${preBeat.title || 'Untitled'}" to happen first, but "${preBeat.title || 'Untitled'}" is placed after it on the timeline.`,
+          pageIds: [beat.id, preId],
+          suggestion: `Rearrange the beats on the roadmap timeline so "${preBeat.title || 'Untitled'}" comes before "${beat.title || 'Untitled'}", or remove the prerequisite.`,
+          detectedAt: now
+        });
+      }
+    });
+  });
+
+  // 2. UNRESOLVED SETUP NODE
+  const setupNodes = allNodes.filter(n => n.type === 'setup');
+  const payoffNodes = allNodes.filter(n => n.type === 'payoff');
+
+  // Build connection lookups
+  const nodeConnections = new Map();
+  tabs.forEach(t => {
+    const conns = t.connections || [];
+    conns.forEach(c => {
+      if (!nodeConnections.has(c.sourceId)) nodeConnections.set(c.sourceId, []);
+      if (!nodeConnections.has(c.targetId)) nodeConnections.set(c.targetId, []);
+      nodeConnections.get(c.sourceId).push(c.targetId);
+      nodeConnections.get(c.targetId).push(c.sourceId);
+    });
+  });
+
+  const tabBeatMap = new Map();
+  tabs.forEach(t => { if (t.beatId) tabBeatMap.set(t.id, t.beatId); });
+
+  setupNodes.forEach(setup => {
+    let resolvedPayoffId = setup.content?.payoffNodeId || '';
+    if (!resolvedPayoffId) {
+      const connectedNodeIds = nodeConnections.get(setup.id) || [];
+      const connectedPayoff = payoffNodes.find(p => connectedNodeIds.includes(p.id));
+      if (connectedPayoff) {
+        resolvedPayoffId = connectedPayoff.id;
+      }
+    }
+
+    const hasPayoff = payoffNodes.some(p => p.id === resolvedPayoffId);
+    if (!hasPayoff) {
+      const beatId = tabBeatMap.get(setup.tabId);
+      const beat = pages.find(p => p.id === beatId);
+      const hostName = beat ? `"${beat.title}"` : 'a canvas tab';
+
+      issues.push({
+        id: generateIssueId() + 'us',
+        type: 'DEAD_END_THREAD',
+        severity: 'medium',
+        description: `Unresolved Setup: "${setup.title || 'Setup Node'}" (type: ${setup.content?.setupType || 'Plant'}) in ${hostName} has no linked payoff or resolution.`,
+        pageIds: beatId ? [beatId] : [],
+        suggestion: `Link this setup to a Payoff Node on a canvas, or create a Payoff Node and draw a connection line to resolve the narrative question.`,
+        detectedAt: now
+      });
+    }
+  });
+
+  // 3. EMPTY CHARACTER PROFILE MOTIVATION
+  const characters = pages.filter(p => p.schemaId === 'story-chars-schema');
+  characters.forEach(char => {
+    const content = char.content || '';
+    let plainText = content;
+    if (content.startsWith('{')) {
+      try {
+        const delta = JSON.parse(content);
+        if (delta.ops) {
+          plainText = delta.ops.filter(op => typeof op.insert === 'string').map(op => op.insert).join('');
+        }
+      } catch (_) {}
+    }
+    const cleanText = plainText.replace(/\s+/g, ' ').trim();
+    
+    const motivationsProp = char.properties?.motivations || '';
+    const hasMotivationText = motivationsProp.trim().length > 10 || cleanText.length > 30;
+
+    if (!hasMotivationText) {
+      issues.push({
+        id: generateIssueId() + 'em',
+        type: 'EMPTY_MOTIVATION',
+        severity: 'low',
+        description: `Empty Motivation: The character profile for "${char.title || 'Untitled'}" is missing motivations, goals, or backstory details.`,
+        pageIds: [char.id],
+        suggestion: `Open "${char.title || 'Untitled'}" and write motivations and backstory details to flesh out the character's narrative arc.`,
+        detectedAt: now
+      });
+    }
+  });
+
+  // 4. ACT II CHARACTER ABSENCE GAP
+  const act1Beats = beats.filter(b => b.properties?.f1 === 'Act I');
+  const act2Beats = beats.filter(b => typeof b.properties?.f1 === 'string' && b.properties.f1.startsWith('Act II'));
+  const act3Beats = beats.filter(b => b.properties?.f1 === 'Act III');
+
+  const charActPresence = new Map();
+  characters.forEach(c => charActPresence.set(c.id, { act1: false, act2: false, act3: false }));
+
+  const checkPresenceInBeats = (beatList, actKey) => {
+    beatList.forEach(beat => {
+      const roadmapChars = beat.properties?.characters || [];
+      roadmapChars.forEach(cid => {
+        if (charActPresence.has(cid)) charActPresence.get(cid)[actKey] = true;
+      });
+
+      const tab = tabs.find(t => t.beatId === beat.id);
+      if (tab) {
+        const nodes = allNodes.filter(n => n.tabId === tab.id);
+        nodes.forEach(n => {
+          if ((n.type === 'pagelink' || n.type === 'statblock') && n.content?.pageId) {
+            const cid = n.content.pageId;
+            if (charActPresence.has(cid)) charActPresence.get(cid)[actKey] = true;
+          }
+        });
+      }
+    });
+  };
+
+  checkPresenceInBeats(act1Beats, 'act1');
+  checkPresenceInBeats(act2Beats, 'act2');
+  checkPresenceInBeats(act3Beats, 'act3');
+
+  charActPresence.forEach((presence, cid) => {
+    if (presence.act1 && presence.act3 && !presence.act2) {
+      const char = characters.find(c => c.id === cid);
+      if (char) {
+        issues.push({
+          id: generateIssueId() + 'ag',
+          type: 'ABSENCE_GAP',
+          severity: 'medium',
+          description: `Act II Absence Gap: Character "${char.title || 'Untitled'}" is active in Act I and Act III, but completely absent from all Act II beats.`,
+          pageIds: [char.id],
+          suggestion: `Add "${char.title || 'Untitled'}" to one or more Act II chapters, or explain their absence in the lore.`,
+          detectedAt: now
+        });
+      }
+    }
+  });
+
+  // 5. CHARACTER ACTIVE IN TWO SIMULTANEOUS BEATS
+  const xGroups = new Map();
+  beats.forEach(beat => {
+    const x = beat.properties?.x || 0;
+    if (!xGroups.has(x)) xGroups.set(x, []);
+    xGroups.get(x).push(beat);
+  });
+
+  xGroups.forEach((groupBeats, x) => {
+    if (groupBeats.length <= 1) return;
+
+    const charActiveBeats = new Map();
+    groupBeats.forEach(beat => {
+      const activeChars = new Set();
+      
+      const roadmapChars = beat.properties?.characters || [];
+      roadmapChars.forEach(cid => activeChars.add(cid));
+
+      const tab = tabs.find(t => t.beatId === beat.id);
+      if (tab) {
+        const nodes = allNodes.filter(n => n.tabId === tab.id);
+        nodes.forEach(n => {
+          if ((n.type === 'pagelink' || n.type === 'statblock') && n.content?.pageId) {
+            activeChars.add(n.content.pageId);
+          }
+        });
+      }
+
+      activeChars.forEach(cid => {
+        if (!charActiveBeats.has(cid)) charActiveBeats.set(cid, []);
+        charActiveBeats.get(cid).push(beat);
+      });
+    });
+
+    charActiveBeats.forEach((activeList, cid) => {
+      if (activeList.length >= 2) {
+        const char = characters.find(c => c.id === cid);
+        if (char) {
+          const beatNames = activeList.map(b => `"${b.title || 'Untitled'}"`).join(' and ');
+          issues.push({
+            id: generateIssueId() + 'sb',
+            type: 'SIMULTANEOUS_BEAT',
+            severity: 'high',
+            description: `Simultaneous Appearance: "${char.title || 'Untitled'}" is active in two parallel story beats occurring at the same time: ${beatNames}.`,
+            pageIds: [char.id, ...activeList.map(b => b.id)],
+            suggestion: `Remove "${char.title || 'Untitled'}" from one of the parallel beats, or adjust timeline positions so they do not occur simultaneously.`,
+            detectedAt: now
+          });
+        }
+      }
+    });
+  });
 
   return issues;
 }

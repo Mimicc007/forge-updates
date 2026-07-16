@@ -456,7 +456,7 @@ class SpotlightTutorial {
     }
   }
 
-  renderStep() {
+  async renderStep() {
     this.clearTaskPolling();
 
     const step = this.steps[this.currentStepIndex];
@@ -508,6 +508,15 @@ class SpotlightTutorial {
     // Prev button visibility
     this.prevBtn.style.display = this.currentStepIndex > 0 ? 'block' : 'none';
 
+    // Run step.onEnter and await it if async
+    if (step.onEnter) {
+      try {
+        await step.onEnter();
+      } catch (err) {
+        console.error("onEnter error:", err);
+      }
+    }
+
     // Handle checkTask steps vs click target vs normal
     if (step.checkTask) {
       this.nextBtn.disabled = true;
@@ -518,8 +527,6 @@ class SpotlightTutorial {
       this.overlay.style.pointerEvents = 'none'; // let user click through
       this.actionHint.innerHTML = step.actionHint || '📝 Task: Perform action to continue';
       this.actionHint.style.display = 'block';
-
-      if (step.onEnter) step.onEnter();
 
       this.taskPollInterval = setInterval(async () => {
         try {
@@ -563,12 +570,11 @@ class SpotlightTutorial {
       this.overlay.style.pointerEvents = 'none'; // let clicks fall through
       this.actionHint.textContent = step.actionHint || '👆 Click the highlighted element to continue';
       this.actionHint.style.display = 'block';
-      if (step.onEnter) step.onEnter();
     } else {
       this.nextBtn.style.display = 'block';
       this.overlay.style.pointerEvents = 'auto';
       this.actionHint.style.display = 'none';
-      if (step.onEnter) step.onEnter();
+
     }
 
     // Clear previous target highlight
@@ -1124,31 +1130,18 @@ export async function runPhase9() {
       steps.push(
         {
           icon: '🛡️',
-          title: 'Task: Add D&D Stat Block',
-          description: `Spawn a <strong>D&D Stat Block</strong> to track monster, NPC, or character statistics on the canvas.`,
-          target: '.canvas-add-node-btn[data-type="statblock"]',
-          placement: 'bottom',
-          requireClickOnTarget: true,
-          actionHint: '👆 Click the "D&D Stat Block" button to spawn it',
-          checkTask: () => !!document.querySelector('.canvas-node[data-node-type="statblock"]')
-        },
-        {
-          icon: '🛡️',
           title: 'D&D Stat Block',
           description: `This is your interactive <strong>D&D Stat Block</strong>. You can track HP, AC, abilities, saving throws, and click on skills or attacks to auto-roll them directly inside the app!`,
           target: () => document.querySelector('.canvas-node[data-node-type="statblock"]'),
           placement: 'right',
-          padding: 4
-        },
-        {
-          icon: '⚔️',
-          title: 'Task: Add Encounter Builder',
-          description: `Spawn an <strong>Encounter Builder</strong> to design combat encounters, track initiative, and balance difficulty.`,
-          target: '.canvas-add-node-btn[data-type="encounter"]',
-          placement: 'bottom',
-          requireClickOnTarget: true,
-          actionHint: '👆 Click the "Encounter Builder" button to spawn it',
-          checkTask: () => !!document.querySelector('.canvas-node[data-node-type="encounter"]')
+          padding: 4,
+          onEnter: async () => {
+            if (!document.querySelector('.canvas-node[data-node-type="statblock"]')) {
+              if (typeof window.spawnNode === 'function') {
+                await window.spawnNode('statblock');
+              }
+            }
+          }
         },
         {
           icon: '⚔️',
@@ -1156,17 +1149,14 @@ export async function runPhase9() {
           description: `This is your <strong>Encounter Builder</strong>. Track initiative order, monitor combatant health, and automatically calculate combat difficulty ratings.`,
           target: () => document.querySelector('.canvas-node[data-node-type="encounter"]'),
           placement: 'right',
-          padding: 4
-        },
-        {
-          icon: '🎲',
-          title: 'Task: Open Dice Tray',
-          description: `Click the <strong>Dice Tray</strong> button to open the interactive 3D dice roller companion panel!`,
-          target: '#canvas-dice-tray-btn',
-          placement: 'bottom',
-          requireClickOnTarget: true,
-          actionHint: '👆 Click the "Dice Tray" button to open it',
-          checkTask: () => !!document.getElementById('canvas-dice-panel')
+          padding: 4,
+          onEnter: async () => {
+            if (!document.querySelector('.canvas-node[data-node-type="encounter"]')) {
+              if (typeof window.spawnNode === 'function') {
+                await window.spawnNode('encounter');
+              }
+            }
+          }
         },
         {
           icon: '🎲',
@@ -1174,38 +1164,31 @@ export async function runPhase9() {
           description: `This is the <strong>Dice Tray</strong>. Select the dice you want to roll, see physics-based 3D dice rolls on the screen, and track roll history with crit alerts!`,
           target: '#canvas-dice-panel',
           placement: 'left',
-          padding: 4
+          padding: 4,
+          onEnter: () => {
+            if (!document.getElementById('canvas-dice-panel')) {
+              const btn = document.getElementById('canvas-dice-tray-btn');
+              if (btn) btn.click();
+            }
+          }
         }
       );
     } else if (styleId === 'gamedev') {
       steps.push(
         {
           icon: '🔄',
-          title: 'Task: Add Behavior Node',
-          description: `Spawn a <strong>Behavior Node</strong> to flowchart state machines, player paths, or quest logic.`,
-          target: '.canvas-add-node-btn[data-type="flowchart"]',
-          placement: 'bottom',
-          requireClickOnTarget: true,
-          actionHint: '👆 Click the "Behavior Node" button to spawn it',
-          checkTask: () => !!document.querySelector('.canvas-node[data-node-type="flowchart"]')
-        },
-        {
-          icon: '🔄',
           title: 'Behavior Node',
           description: `This is a <strong>Behavior Node</strong>. Use it to flowchart state machines, map player choice branches, or document complex game mechanics.`,
           target: () => document.querySelector('.canvas-node[data-node-type="flowchart"]'),
           placement: 'right',
-          padding: 4
-        },
-        {
-          icon: '📈',
-          title: 'Task: Add Progression Calc',
-          description: `Spawn a <strong>Progression Calc</strong> to model level-ups, stat growth, or economy scaling.`,
-          target: '.canvas-add-node-btn[data-type="progression"]',
-          placement: 'bottom',
-          requireClickOnTarget: true,
-          actionHint: '👆 Click the "Progression Calc" button to spawn it',
-          checkTask: () => !!document.querySelector('.canvas-node[data-node-type="progression"]')
+          padding: 4,
+          onEnter: async () => {
+            if (!document.querySelector('.canvas-node[data-node-type="flowchart"]')) {
+              if (typeof window.spawnNode === 'function') {
+                await window.spawnNode('flowchart');
+              }
+            }
+          }
         },
         {
           icon: '📈',
@@ -1213,17 +1196,14 @@ export async function runPhase9() {
           description: `This is a <strong>Progression Calculator</strong>. Plot curves to balance player level scaling, experience points, or resource economies.`,
           target: () => document.querySelector('.canvas-node[data-node-type="progression"]'),
           placement: 'right',
-          padding: 4
-        },
-        {
-          icon: '🧮',
-          title: 'Task: Open XP Solver',
-          description: `Click the <strong>XP Solver</strong> button to open the interactive game design math solver panel!`,
-          target: '#canvas-math-solver-btn',
-          placement: 'bottom',
-          requireClickOnTarget: true,
-          actionHint: '👆 Click the "XP Solver" button to open it',
-          checkTask: () => !!document.getElementById('canvas-math-panel')
+          padding: 4,
+          onEnter: async () => {
+            if (!document.querySelector('.canvas-node[data-node-type="progression"]')) {
+              if (typeof window.spawnNode === 'function') {
+                await window.spawnNode('progression');
+              }
+            }
+          }
         },
         {
           icon: '🧮',
@@ -1231,28 +1211,30 @@ export async function runPhase9() {
           description: `This is the <strong>XP Solver</strong> panel. Test out different formulas and immediately view calculations for level progression and player XP.`,
           target: '#canvas-math-panel',
           placement: 'left',
-          padding: 4
+          padding: 4,
+          onEnter: () => {
+            if (!document.getElementById('canvas-math-panel')) {
+              const btn = document.getElementById('canvas-math-solver-btn');
+              if (btn) btn.click();
+            }
+          }
         }
       );
     } else {
       steps.push(
         {
           icon: '📈',
-          title: 'Task: Open Act Pacing',
-          description: `Click the <strong>Act Pacing</strong> button to open the scene-by-scene narrative pacing tracker!`,
-          target: '#canvas-pacing-tracker-btn',
-          placement: 'bottom',
-          requireClickOnTarget: true,
-          actionHint: '👆 Click the "Act Pacing" button to open it',
-          checkTask: () => !!document.getElementById('canvas-pacing-panel')
-        },
-        {
-          icon: '📈',
           title: 'Act Pacing',
           description: `This is the <strong>Act Pacing</strong> tracker. Visualize the dramatic tension curve and pacing across your entire story or screenplay.`,
           target: '#canvas-pacing-panel',
           placement: 'left',
-          padding: 4
+          padding: 4,
+          onEnter: () => {
+            if (!document.getElementById('canvas-pacing-panel')) {
+              const btn = document.getElementById('canvas-pacing-tracker-btn');
+              if (btn) btn.click();
+            }
+          }
         }
       );
     }
@@ -1314,8 +1296,12 @@ export async function runPhase10() {
               navigate('settings');
             } else {
               saveTutorialState({ active: true, currentPhase: 12, styleId });
-              const btn = document.querySelector('.sidebar-ai-toggle-btn');
-              if (btn) btn.click();
+              const drawer = document.getElementById('ai-drawer');
+              if (!drawer || !drawer.classList.contains('open')) {
+                const btn = document.querySelector('.sidebar-ai-toggle-btn');
+                if (btn) btn.click();
+              }
+              runPhase12();
             }
           }, 2500);
         }
@@ -1328,8 +1314,12 @@ export async function runPhase10() {
           navigate('settings');
         } else {
           saveTutorialState({ active: true, currentPhase: 12, styleId });
-          const btn = document.querySelector('.sidebar-ai-toggle-btn');
-          if (btn) btn.click();
+          const drawer = document.getElementById('ai-drawer');
+          if (!drawer || !drawer.classList.contains('open')) {
+            const btn = document.querySelector('.sidebar-ai-toggle-btn');
+            if (btn) btn.click();
+          }
+          runPhase12();
         }
       }
     });
@@ -1425,16 +1415,24 @@ export async function runPhase11() {
         onEnter: () => {
           tutorial.setTimeoutTracked(() => {
             saveTutorialState({ active: true, currentPhase: 12, styleId });
-            const btn = document.querySelector('.sidebar-ai-toggle-btn');
-            if (btn) btn.click();
+            const drawer = document.getElementById('ai-drawer');
+            if (!drawer || !drawer.classList.contains('open')) {
+              const btn = document.querySelector('.sidebar-ai-toggle-btn');
+              if (btn) btn.click();
+            }
+            runPhase12();
           }, 1500);
         }
       }
     ], {
       onFinish: () => {
         saveTutorialState({ active: true, currentPhase: 12, styleId });
-        const btn = document.querySelector('.sidebar-ai-toggle-btn');
-        if (btn) btn.click();
+        const drawer = document.getElementById('ai-drawer');
+        if (!drawer || !drawer.classList.contains('open')) {
+          const btn = document.querySelector('.sidebar-ai-toggle-btn');
+          if (btn) btn.click();
+        }
+        runPhase12();
       }
     });
   }, 450);
@@ -1480,16 +1478,38 @@ export async function runPhase12() {
         onEnter: () => {
           tutorial.setTimeoutTracked(() => {
             saveTutorialState({ active: true, currentPhase: 13, styleId });
-            const btn = document.querySelector('.sidebar-scene-mode-btn');
-            if (btn) btn.click();
+            // Close Ignis if open
+            const ignisDrawer = document.getElementById('ai-drawer');
+            if (ignisDrawer && ignisDrawer.classList.contains('open')) {
+              const btn = document.querySelector('.sidebar-ai-toggle-btn');
+              if (btn) btn.click();
+            }
+            // Open Scene Mode if closed
+            const sceneDrawer = document.getElementById('scene-mode-drawer');
+            if (!sceneDrawer || !sceneDrawer.classList.contains('open')) {
+              const btn = document.querySelector('.sidebar-scene-mode-btn');
+              if (btn) btn.click();
+            }
+            runPhase13();
           }, 2000);
         }
       }
     ], {
       onFinish: () => {
         saveTutorialState({ active: true, currentPhase: 13, styleId });
-        const btn = document.querySelector('.sidebar-scene-mode-btn');
-        if (btn) btn.click();
+        // Close Ignis if open
+        const ignisDrawer = document.getElementById('ai-drawer');
+        if (ignisDrawer && ignisDrawer.classList.contains('open')) {
+          const btn = document.querySelector('.sidebar-ai-toggle-btn');
+          if (btn) btn.click();
+        }
+        // Open Scene Mode if closed
+        const sceneDrawer = document.getElementById('scene-mode-drawer');
+        if (!sceneDrawer || !sceneDrawer.classList.contains('open')) {
+          const btn = document.querySelector('.sidebar-scene-mode-btn');
+          if (btn) btn.click();
+        }
+        runPhase13();
       }
     });
   }, 600);

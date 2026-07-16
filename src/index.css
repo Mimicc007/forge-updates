@@ -3,68 +3,77 @@
    A cinematic, dark-themed design system for a game dev bible.
    ============================================================ */
 
+/* ---------- Google Fonts ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
 /* ---------- CSS Custom Properties ---------- */
 :root {
-  /* --- Colors (Zinc/Monochrome) --- */
-  --bg-deepest: #09090b;
-  --bg-deep: #18181b;
-  --bg-base: #27272a;
-  --bg-surface: #3f3f46;
-  --bg-elevated: #52525b;
-  --bg-hover: #3f3f46;
-  --bg-active: #52525b;
+  /* --- Colors — Deep Navy/Ember Palette (Forge signature) --- */
+  --bg-deepest: #070b14;         /* Deep navy, warmer than pure black */
+  --bg-deep: #0d1420;            /* Slightly lighter navy */
+  --bg-base: #111927;            /* Base content surface */
+  --bg-surface: #192133;         /* Raised surface */
+  --bg-elevated: #1e293b;        /* Elevated cards */
+  --bg-hover: #1e2d42;           /* Hover state */
+  --bg-active: #243549;          /* Active state */
 
   --border-subtle: rgba(255, 255, 255, 0.05);
   --border-default: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.2);
-  --border-glow: rgba(255, 255, 255, 0.3);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --border-glow: rgba(255, 255, 255, 0.28);
 
   --text-primary: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-tertiary: #71717a;
-  --text-muted: #52525b;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-muted: #374151;
 
-  /* Subtle Accent (Slightly warm/gold for "Forge" feel, but mostly monochrome) */
-  --accent-primary: #f4f4f5; 
+  /* --- Ember/Amber Accent (Forge's editorial badge color, like vvd's amber labels) --- */
+  --accent-amber: #f59e0b;
+  --accent-amber-light: #fbbf24;
+  --accent-amber-dim: rgba(245, 158, 11, 0.12);
+  --accent-amber-border: rgba(245, 158, 11, 0.3);
+
+  /* Primary accent — warm white/silver */
+  --accent-primary: #f1f5f9;
   --accent-primary-hover: #ffffff;
-  --accent-primary-dim: rgba(255, 255, 255, 0.08);
-  --accent-primary-glow: rgba(255, 255, 255, 0.15);
+  --accent-primary-dim: rgba(241, 245, 249, 0.08);
+  --accent-primary-glow: rgba(241, 245, 249, 0.15);
 
-  --accent-secondary: #e4e4e7;
-  --accent-secondary-hover: #f4f4f5;
-  --accent-secondary-dim: rgba(228, 228, 231, 0.1);
+  --accent-secondary: #cbd5e1;
+  --accent-secondary-hover: #e2e8f0;
+  --accent-secondary-dim: rgba(203, 213, 225, 0.1);
 
-  --accent-purple: #d4d4d8;
-  --accent-purple-dim: rgba(212, 212, 216, 0.1);
+  --accent-purple: #a78bfa;
+  --accent-purple-dim: rgba(167, 139, 250, 0.12);
 
-  --accent-green: #22c55e; /* Keep green for positive status */
+  --accent-green: #22c55e;
   --accent-green-dim: rgba(34, 197, 94, 0.1);
 
-  --accent-red: #ef4444; /* Keep red for destructive actions */
+  --accent-red: #ef4444;
   --accent-red-dim: rgba(239, 68, 68, 0.1);
 
-  --accent-cyan: #a1a1aa;
-  --accent-cyan-dim: rgba(161, 161, 170, 0.1);
+  --accent-cyan: #38bdf8;
+  --accent-cyan-dim: rgba(56, 189, 248, 0.1);
 
-  /* Role colors (Monochrome/Muted) */
-  --role-protagonist: #f4f4f5;
-  --role-antagonist: #52525b;
-  --role-rival: #a1a1aa;
-  --role-supporting: #d4d4d8;
-  --role-npc: #71717a;
-  --role-boss: #3f3f46;
-  --role-miniboss: #52525b;
+  /* Role colors */
+  --role-protagonist: #f1f5f9;
+  --role-antagonist: #374151;
+  --role-rival: #94a3b8;
+  --role-supporting: #cbd5e1;
+  --role-npc: #64748b;
+  --role-boss: #1e293b;
+  --role-miniboss: #374151;
 
   /* Status colors */
   --status-alive: #22c55e;
   --status-dead: #ef4444;
-  --status-unknown: #71717a;
-  --status-sealed: #a1a1aa;
+  --status-unknown: #64748b;
+  --status-sealed: #94a3b8;
 
-  /* --- Typography --- */
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-hud: 'Geist Mono', 'JetBrains Mono', monospace;
+  /* --- Typography (Space Grotesk — same as vvd, modern & editorial) --- */
+  --font-body: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-hud: 'Space Mono', 'Geist Mono', 'JetBrains Mono', monospace;
 
   --fs-xs: 0.6875rem;    /* 11px */
   --fs-sm: 0.75rem;      /* 12px */
@@ -105,20 +114,29 @@
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-xl: 12px;
+  --radius-2xl: 16px;
   --radius-full: 9999px;
 
-  /* --- Shadows (Sharper, subtler) --- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+  /* --- Shadows --- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -2px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.6);
   --shadow-glow: none;
   --shadow-glow-strong: none;
 
-  /* --- Glass --- */
-  --glass-bg: rgba(24, 24, 27, 0.85);
-  --glass-blur: blur(12px);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  /* --- Glass (vvd-style: very transparent with backdrop blur) --- */
+  --glass-bg: rgba(7, 11, 20, 0.80);
+  --glass-surface: rgba(255, 255, 255, 0.04);
+  --glass-surface-hover: rgba(255, 255, 255, 0.07);
+  --glass-surface-active: rgba(255, 255, 255, 0.10);
+  --glass-blur: blur(16px);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-border-hover: rgba(255, 255, 255, 0.18);
+
+  /* --- Dot Grid (vvd-style section backgrounds) --- */
+  --dot-grid-color: rgba(255, 255, 255, 0.07);
+  --dot-grid-size: 20px;
 
   /* --- Layout --- */
   --sidebar-width: 260px;
@@ -132,6 +150,38 @@
   --transition-base: 200ms ease;
   --transition-slow: 300ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-bounce: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* --- Surface Layering (semantic z-stack tokens) --- */
+  --surface-0: var(--bg-deepest);
+  --surface-1: var(--bg-deep);
+  --surface-2: var(--bg-base);
+  --surface-3: var(--bg-surface);
+  --surface-4: var(--bg-elevated);
+
+  /* --- Content Width Tokens --- */
+  --content-width-prose: 720px;
+  --content-width-wide: 1100px;
+  --content-width-full: 100%;
+
+  /* --- Premium Easing Curves --- */
+  --easing-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --easing-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --easing-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+  --easing-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* --- Focus Ring (accessibility) --- */
+  --focus-ring: 0 0 0 2px var(--bg-deepest), 0 0 0 4px var(--accent-amber);
+  --focus-ring-inset: inset 0 0 0 2px var(--accent-amber);
+
+  /* --- Z-Index Scale --- */
+  --z-base: 1;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
 }
 
 /* ---------- Reset & Base ---------- */
@@ -160,15 +210,18 @@ body {
   position: relative;
   overflow: hidden;
   height: 100vh;
+  letter-spacing: -0.01em; /* Space Grotesk looks better slightly tighter */
 }
 
-/* Subtle dot grid overlay on body */
+/* vvd-style dot grid overlay on body */
 body::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(var(--border-default) 1px, transparent 1px);
-  background-size: 32px 32px;
+  background-image: radial-gradient(circle, var(--dot-grid-color) 1px, transparent 1px);
+  background-size: var(--dot-grid-size) var(--dot-grid-size);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
   pointer-events: none;
   z-index: 0;
 }
@@ -187,6 +240,826 @@ body::before {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-tertiary);
+}
+
+/* ============================================================
+   FORGE V2.0 — Animation & Motion System
+   ============================================================ */
+
+/* Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDownFade {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(24px); }
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmerSweep {
+  from { background-position: -200% center; }
+  to { background-position: 200% center; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Page enter/exit transition classes (managed by router.js) */
+.page-enter {
+  animation: slideUpFade 220ms var(--easing-out-expo) both;
+}
+
+.page-exit {
+  animation: fadeOut 120ms ease both;
+  pointer-events: none;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Stagger children animation utility */
+.stagger-children > * {
+  animation: slideUpFade 240ms var(--easing-out-expo) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 40ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 80ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 160ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 280ms; }
+
+/* Generic animation utilities */
+.animate-fade-in {
+  animation: fadeIn 200ms ease both;
+}
+.animate-slide-up {
+  animation: slideUpFade 250ms var(--easing-out-expo) both;
+}
+.animate-scale-in {
+  animation: scaleIn 200ms var(--easing-out-expo) both;
+}
+.animate-slide-right {
+  animation: slideInRight 250ms var(--easing-out-expo) both;
+}
+
+/* Modal animation */
+.modal-overlay {
+  animation: fadeIn 150ms ease both;
+}
+.modal-panel {
+  animation: scaleIn 200ms var(--easing-out-expo) both;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   FORGE V2.0 — Accessibility
+   ============================================================ */
+
+/* Universal focus ring (keyboard navigation) */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+/* Remove focus ring for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ============================================================
+   FORGE V2.0 — Shimmer Loading State
+   ============================================================ */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-surface) 75%
+  );
+  background-size: 400% 100%;
+  animation: shimmerSweep 1.6s ease infinite;
+  border-radius: var(--radius-md);
+}
+
+/* ============================================================
+   FORGE V2.0 — Premium Button System
+   ============================================================ */
+
+/* Button height tokens */
+.btn-xs { height: 24px; padding: 0 var(--sp-2); font-size: var(--fs-xs); gap: 4px; }
+.btn-sm { height: 30px; padding: 0 var(--sp-3); font-size: var(--fs-sm); }
+.btn-md { height: 36px; padding: 0 var(--sp-4); font-size: var(--fs-base); }
+.btn-lg { height: 44px; padding: 0 var(--sp-6); font-size: var(--fs-md); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  height: 32px;
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  font-family: var(--font-body);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 150ms var(--easing-out-expo);
+  letter-spacing: -0.01em;
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--text-primary);
+  background: var(--glass-surface);
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: rgba(255, 255, 255, 0.06);
+  transition: opacity 150ms ease;
+}
+
+.btn:hover::after { opacity: 1; }
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: var(--accent-amber);
+  color: #0a0812;
+  border-color: transparent;
+  font-weight: var(--fw-semibold);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.btn-primary:hover { filter: brightness(1.08); }
+
+.btn-secondary {
+  background: var(--glass-surface);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+}
+.btn-secondary:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
+}
+.btn-ghost:hover {
+  background: var(--glass-surface);
+  color: var(--text-primary);
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* Icon button */
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+.btn-icon:hover {
+  background: var(--glass-surface);
+  color: var(--text-secondary);
+}
+.btn-icon:active { transform: scale(0.92); }
+.btn-icon svg { width: 16px; height: 16px; }
+
+/* ============================================================
+   FORGE V2.0 — Page Transition Wrapper
+   ============================================================ */
+
+#page-container {
+  position: relative;
+}
+
+.page-wrapper {
+  animation: slideUpFade 220ms var(--easing-out-expo) both;
+}
+
+/* Floating bubble toolbar (used in page editor) */
+.bubble-toolbar {
+  position: fixed;
+  z-index: var(--z-tooltip);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.05);
+  animation: scaleIn 150ms var(--easing-out-expo) both;
+  pointer-events: all;
+  white-space: nowrap;
+}
+
+.bubble-toolbar button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 100ms ease;
+  font-size: 13px;
+  font-weight: 600;
+}
+.bubble-toolbar button:hover {
+  background: var(--glass-surface-hover);
+  color: var(--text-primary);
+}
+.bubble-toolbar button.active {
+  background: var(--accent-amber-dim);
+  color: var(--accent-amber);
+}
+.bubble-toolbar .bubble-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-default);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   FORGE V2.0 — Breadcrumb
+   ============================================================ */
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  color: var(--text-tertiary);
+  margin-bottom: var(--sp-6);
+}
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color 150ms ease;
+  cursor: pointer;
+}
+.breadcrumb-item:hover { color: var(--text-primary); }
+.breadcrumb-item.active { color: var(--text-secondary); cursor: default; }
+.breadcrumb-sep {
+  color: var(--text-muted);
+  font-size: 10px;
+  user-select: none;
+}
+
+/* ============================================================
+   FORGE V2.0 — Autosave Indicator
+   ============================================================ */
+
+.autosave-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  transition: opacity 300ms ease;
+  user-select: none;
+}
+.autosave-indicator.saving { color: var(--text-tertiary); }
+.autosave-indicator.saved { opacity: 0; }
+.autosave-indicator svg {
+  width: 12px;
+  height: 12px;
+}
+.autosave-indicator.saving svg {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   FORGE V2.0 — Backlinks Panel
+   ============================================================ */
+
+.backlinks-section {
+  margin-top: var(--sp-16);
+  padding-top: var(--sp-6);
+  border-top: 1px solid var(--border-subtle);
+}
+.backlinks-title {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: var(--sp-4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.backlink-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 150ms ease;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+.backlink-item:hover {
+  background: var(--glass-surface);
+  border-color: var(--border-subtle);
+}
+.backlink-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--glass-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  margin-top: 1px;
+}
+.backlink-content {}
+.backlink-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.backlink-excerpt {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ============================================================
+   FORGE V2.0 — Properties Side Panel
+   ============================================================ */
+
+.props-panel {
+  position: fixed;
+  top: 32px;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  background: linear-gradient(180deg, rgba(10,8,18,0.98) 0%, rgba(15,12,24,0.98) 100%);
+  border-left: 1px solid rgba(229,169,59,0.1);
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: -8px 0 40px rgba(0,0,0,0.5), -1px 0 0 rgba(255,255,255,0.04);
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.props-panel.open {
+  transform: translateX(0);
+}
+.props-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid rgba(229,169,59,0.08);
+  flex-shrink: 0;
+  background: rgba(229,169,59,0.03);
+}
+.props-panel-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+}
+.props-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.props-panel-body::-webkit-scrollbar { width: 4px; }
+.props-panel-body::-webkit-scrollbar-track { background: transparent; }
+.props-panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+.props-field-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 10px 12px 10px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.props-field-card:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(229,169,59,0.15);
+}
+.prop-field-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.62rem;
+  font-weight: var(--fw-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.prop-field-value {
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+/* ============================================================
+   FORGE V2.0 — Focus Mode
+   ============================================================ */
+
+body.focus-mode #sidebar,
+body.focus-mode .ai-drawer,
+body.focus-mode .scene-drawer {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.focus-mode #main-content {
+  margin-left: 0 !important;
+  transition: margin-left 300ms var(--easing-out-expo);
+}
+
+body.focus-mode .page-view-wrapper {
+  max-width: var(--content-width-prose);
+  margin: 0 auto;
+}
+
+.focus-mode-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+  display: none;
+  align-items: center;
+  gap: var(--sp-4);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-overlay);
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  animation: slideUpFade 250ms var(--easing-out-expo) both;
+}
+body.focus-mode .focus-mode-bar {
+  display: flex;
+}
+
+/* Typewriter mode: dim all but active paragraph */
+body.typewriter-mode .ql-editor p:not(.ql-active),
+body.typewriter-mode .ql-editor h1:not(.ql-active),
+body.typewriter-mode .ql-editor h2:not(.ql-active),
+body.typewriter-mode .ql-editor h3:not(.ql-active) {
+  opacity: 0.35;
+  transition: opacity 200ms ease;
+}
+
+/* ============================================================
+   FORGE V2.0 — Schema View Gallery Mode
+   ============================================================ */
+
+.schema-view-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+}
+
+.gallery-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 180ms var(--easing-out-expo);
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  animation: slideUpFade 200ms var(--easing-out-expo) both;
+}
+.gallery-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+.gallery-card-cover {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+.gallery-card-body {
+  padding: var(--sp-3) var(--sp-4);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.gallery-card-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gallery-card-meta {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.gallery-card-tag {
+  display: inline-flex;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--accent-amber-dim);
+  color: var(--accent-amber);
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+}
+
+/* View switcher tabs */
+.view-switcher {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 3px;
+}
+.view-switcher-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 100ms ease;
+}
+.view-switcher-btn:hover { color: var(--text-secondary); background: var(--glass-surface); }
+.view-switcher-btn.active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-deep);
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--glass-surface);
+  border: 1px solid var(--border-default);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  transition: all 100ms ease;
+}
+.filter-chip button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  transition: color 100ms ease;
+}
+.filter-chip button:hover { color: var(--text-primary); }
+
+/* ============================================================
+   FORGE V2.0 — Activity Feed (Dashboard)
+   ============================================================ */
+
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  cursor: pointer;
+  transition: background 120ms ease;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+}
+.activity-item:hover { background: var(--glass-surface); }
+.activity-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.activity-dot.created { background: var(--accent-green); }
+.activity-dot.edited { background: var(--accent-amber); }
+.activity-dot.deleted { background: var(--accent-red); }
+.activity-text {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.activity-text strong { color: var(--text-primary); font-weight: var(--fw-medium); }
+.activity-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ============================================================
+   FORGE V2.0 — Graph Enhancements
+   ============================================================ */
+
+.graph-legend {
+  position: absolute;
+  bottom: 80px;
+  left: 16px;
+  background: rgba(7, 11, 20, 0.88);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-3) var(--sp-4);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  z-index: var(--z-raised);
+  animation: slideInLeft 250ms var(--easing-out-expo) both;
+}
+.graph-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  transition: background 100ms ease;
+}
+.graph-legend-item:hover { background: var(--glass-surface); }
+.graph-legend-item.dimmed { opacity: 0.4; }
+.graph-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.graph-node-tooltip {
+  position: fixed;
+  z-index: var(--z-tooltip);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-3) var(--sp-4);
+  box-shadow: var(--shadow-xl);
+  pointer-events: none;
+  max-width: 220px;
+  animation: scaleIn 120ms var(--easing-out-expo) both;
+}
+.graph-node-tooltip-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--sp-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.graph-node-tooltip-type {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--sp-2);
+}
+.graph-node-tooltip-connections {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  line-height: 1.5;
 }
 
 /* Selection */
@@ -237,26 +1110,63 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
   -webkit-app-region: no-drag;
 }
 
+/* ---------- App Titlebar Drag Zone ---------- */
+#forge-titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: #0a0812;
+  z-index: 999999;
+  -webkit-app-region: drag;
+  user-select: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
 /* ---------- App Layout ---------- */
 #app {
   display: flex;
-  height: 100vh;
+  margin-top: 32px;
+  height: calc(100vh - 32px) !important;
   overflow: hidden;
+}
+
+/* ---------- Page View / Editor Layout ---------- */
+.page-view-wrapper {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: var(--sp-10) var(--sp-10) var(--sp-16) !important;
+  transition: padding-right 300ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.page-view-wrapper.props-open {
+  padding-right: 320px !important; /* 280px panel + 40px margin */
 }
 
 /* ---------- Sidebar ---------- */
 #sidebar {
-  width: var(--sidebar-width);
-  background: var(--bg-deep);
-  border-right: 1px solid var(--border-default);
+  width: var(--sidebar-collapsed-width);  /* 64px — icon-only default */
+  background: linear-gradient(180deg, rgba(7,11,20,0.98) 0%, rgba(13,20,32,0.96) 100%);
+  border-right: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   transition: width var(--transition-slow);
   flex-shrink: 0;
   z-index: 50;
   position: relative;
+  overflow: hidden;  /* clip labels when collapsed */
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
+#sidebar:hover,
+#sidebar.pinned {
+  width: var(--sidebar-width);  /* 260px — expanded with labels */
+}
+
+/* Keep old collapsed class working for backward compat, though it's now the default */
 #sidebar.collapsed {
   width: var(--sidebar-collapsed-width);
 }
@@ -268,9 +1178,223 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
   height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
-  background: var(--bg-base);
+  background: linear-gradient(180deg, #070b14 0%, #0a0f1a 40%, #111a2e 70%, #070b14 100%);
   position: relative;
 }
+
+/* Layer 2: Masked dot grid overlay */
+#main-content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 18px 18px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.8;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+/* Layer 3: Drifting radial nebula glow */
+#main-content::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: 15%;
+  width: 70%;
+  height: 70%;
+  background: radial-gradient(ellipse 100% 50% at 50% 50%, var(--accent-primary-dim, rgba(56, 120, 160, 0.08)) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  animation: atmosphereDrift 20s ease-in-out infinite alternate;
+}
+
+/* Floating Ambient Orbs for V2.0 Depth */
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(140px);
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: screen;
+}
+.orb-primary {
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, var(--accent-primary, #e5a93b) 0%, transparent 80%);
+  top: 15%;
+  left: 20%;
+  animation: floatOrb1 25s ease-in-out infinite alternate;
+}
+.orb-secondary {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, var(--accent-primary-hover, var(--accent-primary)) 0%, transparent 80%);
+  bottom: 20%;
+  right: 15%;
+  animation: floatOrb2 30s ease-in-out infinite alternate;
+}
+
+@keyframes floatOrb1 {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.12; }
+  50% { transform: translate(6%, -4%) scale(1.08); opacity: 0.18; }
+  100% { transform: translate(-4%, 8%) scale(0.92); opacity: 0.12; }
+}
+
+@keyframes floatOrb2 {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.15; }
+  50% { transform: translate(-8%, 6%) scale(0.94); opacity: 0.1; }
+  100% { transform: translate(4%, -6%) scale(1.06); opacity: 0.15; }
+}
+
+@keyframes atmosphereDrift {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.8; }
+  50% { transform: translate(5%, 4%) scale(1.05); opacity: 1; }
+  100% { transform: translate(-3%, 8%) scale(0.95); opacity: 0.7; }
+}
+
+/* ─── VVD-Style Utility Classes ─────────────────────────────────── */
+
+/* Amber badge label — like vvd's section labels */
+.vvd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--accent-amber-border);
+  background: var(--accent-amber-dim);
+  color: var(--accent-amber-light);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  font-family: var(--font-hud);
+  letter-spacing: 0.06em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Glass pill — like vvd's nav items */
+.glass-pill {
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all var(--transition-base);
+}
+.glass-pill:hover {
+  background: var(--glass-surface-hover);
+  border-color: var(--glass-border-hover);
+}
+
+/* Dot grid section background */
+.dot-grid-bg {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Shimmer "New" badge — like vvd's feature announcement pill */
+.shimmer-badge {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 5px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.08);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.shimmer-badge::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  animation: shimmer-slide 2.5s infinite;
+}
+.shimmer-badge .badge-new {
+  background: #10b981;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* VVD-style feature tab pill (for dashboard sidebar rail) */
+.feature-tab-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-surface);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  user-select: none;
+}
+.feature-tab-pill:hover {
+  background: var(--glass-surface-hover);
+  border-color: var(--glass-border-hover);
+  opacity: 1 !important;
+}
+.feature-tab-pill.active {
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.22);
+  opacity: 1 !important;
+}
+
+/* Scroll-reveal animation (used on dashboard cards) */
+.reveal-card {
+  opacity: 0;
+  transform: translateX(24px);
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal-card.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* VVD card-wake effect — cards start desaturated, hover wakes them */
+.card-wake {
+  filter: brightness(0.6) saturate(0.3);
+  transition: filter 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card-wake:hover {
+  filter: brightness(1) saturate(1);
+  transform: scale(1.02);
+}
+.card-wake.card-wake-active {
+  filter: brightness(1) saturate(1);
+  transform: scale(1.04);
+}
+
+/* Horizontal scroll area with mask-fade edges (vvd gallery pattern) */
+.hscroll-gallery {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  mask-image: linear-gradient(to right, transparent 0%, black 5%, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 90%, transparent 100%);
+}
+.hscroll-gallery::-webkit-scrollbar { display: none; }
 
 #page-container {
   max-width: var(--page-max-width);
@@ -415,13 +1539,15 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
 
 /* ---------- Sidebar Styles ---------- */
 .sidebar-header {
-  padding: var(--sp-5) var(--sp-5);
+  padding: var(--sp-4) var(--sp-3);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--sp-3);
-  border-bottom: 1px solid var(--border-subtle);
-  min-height: 64px;
+  border-bottom: 1px solid var(--glass-border);
+  min-height: 60px;
   -webkit-app-region: drag;
+  transition: padding var(--transition-slow), justify-content var(--transition-slow);
 }
 
 .sidebar-logo-wrapper {
@@ -429,23 +1555,30 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
   align-items: center;
   gap: var(--sp-2);
   min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .sidebar-logo {
   width: 32px;
   height: 32px;
   flex-shrink: 0;
+  /* vvd-style: logo spins 180° on hover */
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.sidebar-logo-wrapper:hover .sidebar-logo {
+  transform: rotate(180deg);
 }
 
 .sidebar-title {
   font-family: var(--font-heading);
   font-weight: var(--fw-bold);
-  font-size: var(--fs-lg);
+  font-size: var(--fs-md);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
-  letter-spacing: 0.5px;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-red));
+  letter-spacing: 0.08em;
+  background: linear-gradient(135deg, var(--accent-amber-light) 0%, var(--accent-primary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -455,6 +1588,7 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
   flex: 1;
   padding: var(--sp-3) var(--sp-2);
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: var(--sp-1);
@@ -489,37 +1623,19 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
 }
 
 .nav-item:hover {
-  background: var(--bg-hover);
+  background: var(--glass-surface-hover);
   color: var(--text-primary);
 }
 
 .nav-item.active {
-  background: linear-gradient(90deg, rgba(229, 169, 59, 0.12) 0%, transparent 100%);
-  color: var(--accent-primary-hover);
-  border-left: 3px solid var(--accent-primary);
-  font-family: var(--font-hud);
-  font-weight: var(--fw-bold);
-  letter-spacing: 0.5px;
-  text-shadow: 0 0 8px rgba(229, 169, 59, 0.4);
-  padding-left: calc(var(--sp-3) - 3px); /* Offset border width */
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.10) 0%, rgba(245, 158, 11, 0.03) 60%, transparent 100%);
+  color: var(--text-primary);
+  border-left: 2px solid var(--accent-amber);
+  font-weight: var(--fw-semibold);
+  padding-left: calc(var(--sp-3) - 2px);
 }
 
-.nav-item.active::before {
-  content: '▶';
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 8px;
-  color: var(--accent-primary);
-  opacity: 0.8;
-  animation: blinkGlow 1.5s infinite alternate;
-}
-
-@keyframes blinkGlow {
-  0% { opacity: 0.3; text-shadow: 0 0 2px var(--accent-primary); }
-  100% { opacity: 1; text-shadow: 0 0 10px var(--accent-primary-hover); }
-}
+/* Removed ::before arrow indicator — active state is communicated by background only */
 
 .nav-item.drag-hover {
   background: rgba(229, 169, 59, 0.12);
@@ -546,6 +1662,7 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
 .nav-item-label {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-footer {
@@ -557,58 +1674,79 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-3);
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border-radius: var(--radius-md);
   color: var(--text-tertiary);
   font-size: var(--fs-sm);
-  width: 100%;
+  flex-shrink: 0;
   transition: all var(--transition-fast);
-  white-space: nowrap;
-  overflow: hidden;
 }
 
 .sidebar-collapse-btn:hover {
-  background: var(--bg-hover);
+  background: var(--glass-surface-hover);
   color: var(--text-secondary);
 }
 
-/* Collapsed sidebar adjustments */
-#sidebar.collapsed .sidebar-title,
-#sidebar.collapsed .nav-item-label,
-#sidebar.collapsed .sidebar-section-label,
-#sidebar.collapsed .sidebar-collapse-btn span {
+/* Default icon-only state: hide labels and section headers */
+#sidebar:not(:hover):not(.pinned) .sidebar-title,
+#sidebar:not(:hover):not(.pinned) .nav-item-label,
+#sidebar:not(:hover):not(.pinned) .sidebar-section-label,
+#sidebar:not(:hover):not(.pinned) .sidebar-logo-wrapper .sidebar-title {
   opacity: 0;
-  width: 0;
+  max-width: 0;
   overflow: hidden;
+  pointer-events: none;
 }
 
-#sidebar.collapsed .nav-item {
+#sidebar:not(:hover):not(.pinned) .nav-item {
   justify-content: center;
-  padding: var(--sp-3);
+  padding: var(--sp-2) 0;
+  gap: 0;
 }
 
-#sidebar.collapsed .sidebar-header {
-  justify-content: center;
-  padding: var(--sp-4) var(--sp-2);
-}
-
-#sidebar.collapsed .sidebar-logo-wrapper {
+#sidebar:not(:hover):not(.pinned) .sidebar-sublist-toggle,
+#sidebar:not(:hover):not(.pinned) .sidebar-sublist,
+#sidebar:not(:hover):not(.pinned) .sidebar-tab-empty,
+#sidebar:not(:hover):not(.pinned) .sidebar-tab-delete-btn {
   display: none !important;
 }
 
-#sidebar.collapsed .sidebar-collapse-btn {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  display: flex !important;
-  align-items: center;
+#sidebar:not(:hover):not(.pinned) .sidebar-header {
   justify-content: center;
-  margin: 0 auto;
+  padding-left: 0;
+  padding-right: 0;
 }
 
-#sidebar.collapsed .nav-item-icon {
-  font-size: var(--fs-lg);
+#sidebar:not(:hover):not(.pinned) .sidebar-collapse-btn {
+  display: none !important;
+}
+
+/* Smooth label reveal on expand */
+#sidebar .nav-item-label,
+#sidebar .sidebar-title,
+#sidebar .sidebar-section-label {
+  transition: opacity var(--transition-slow), max-width var(--transition-slow);
+  max-width: 200px;
+}
+
+/* Expanded: nav items left-aligned */
+#sidebar:hover .nav-item,
+#sidebar.pinned .nav-item {
+  justify-content: flex-start;
+}
+
+/* Nav item active state in icon-only mode: use a dot indicator instead of left border */
+#sidebar:not(:hover):not(.pinned) .nav-item.active {
+  border-left: none;
+  background: rgba(245, 158, 11, 0.15);
+  padding-left: var(--sp-3);
+}
+
+/* Backward compat: old collapsed class still works */
+#sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
 }
 
 /* ---------- Page Header ---------- */
@@ -1904,6 +3042,22 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+@keyframes shimmer-slide {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
 
 .animate-pulse-glow {
   animation: pulseGlow 3s ease-in-out infinite;
@@ -3447,12 +4601,12 @@ html[data-theme="obsidian"] {
 }
 .zen-focus-container {
   width: 100%;
-  max-width: 720px;
-  height: 100%;
-  max-height: 80vh;
+  max-width: 100%;
+  height: 100vh;
+  max-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 24px;
+  padding: 40px 60px 24px;
   box-sizing: border-box;
 }
 .zen-focus-header {
@@ -3491,11 +4645,10 @@ html[data-theme="obsidian"] {
 }
 .zen-focus-editor-wrapper {
   flex: 1;
-  background: linear-gradient(to bottom, #110e0b, #0f0c09);
-  border: 1px solid rgba(229, 169, 59, 0.1);
-  border-radius: 12px;
-  padding: 32px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 10px 0 20px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -3511,8 +4664,9 @@ html[data-theme="obsidian"] {
   flex-direction: column;
 }
 .zen-focus-editor-wrapper .ql-editor {
-  padding: 0 !important;
+  padding: 0 5% !important;
   flex: 1;
+  box-sizing: border-box;
 }
 .zen-focus-editor-wrapper .ql-editor p {
   margin-bottom: 1.5em !important;
@@ -3930,4 +5084,26 @@ html[data-theme="obsidian"] {
   background: rgba(255,255,255,0.3);
 }
 
+/* Custom Scrollbar for Beat Sheet */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
 
+.bs-beat-item {
+  transition: all 0.2s ease-in-out;
+}
+.bs-beat-item:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}

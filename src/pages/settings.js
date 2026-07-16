@@ -160,6 +160,7 @@ async function renderTabContent(panel, project) {
           showToast('General settings saved!', 'success');
         }
       });
+
       break;
 
     case 'visuals':
@@ -747,7 +748,7 @@ async function renderTabContent(panel, project) {
     }
 
     case 'updates': {
-      let currentVersion = 'v0.1.5-alpha';
+      let currentVersion = 'v0.2.0-alpha';
       if (window.electronAPI && window.electronAPI.getAppVersion) {
         try {
           const v = await window.electronAPI.getAppVersion();

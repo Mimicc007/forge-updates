@@ -153,6 +153,7 @@ export async function renderWorkspace(container, params) {
 
   window.canvasState = canvasState;
   window.panToNode = panToNode;
+  window.spawnNode = spawnNode;
 
   // Track active canvas tab for sidebar drop-to-canvas feature
   localStorage.setItem('forge-active-tab-id', tabId);
@@ -747,6 +748,10 @@ async function handleDestroyNodes(data) {
       
       // Remove connections involving this node
       if (canvasState.tab.connections) {
+        const linksToDelete = canvasState.tab.connections.filter(c => c.sourceId === entry.data.id || c.targetId === entry.data.id);
+        for (const c of linksToDelete) {
+          await checkAndClearPayoffLink(c.sourceId, c.targetId);
+        }
         canvasState.tab.connections = canvasState.tab.connections.filter(c => c.sourceId !== entry.data.id && c.targetId !== entry.data.id);
       }
     } catch (e) {
@@ -796,6 +801,9 @@ async function handleUnlinkNodes(data) {
 
   if (unlinkAll) {
     const totalCount = canvasState.tab.connections.length;
+    for (const c of canvasState.tab.connections) {
+      await checkAndClearPayoffLink(c.sourceId, c.targetId);
+    }
     canvasState.tab.connections = [];
     await saveTab(canvasState.tab);
     await flushFileAutosave();
@@ -836,6 +844,10 @@ async function handleUnlinkNodes(data) {
   if (unlinkSpecificNodes.length > 0) {
     const beforeCount = canvasState.tab.connections.length;
     const ids = unlinkSpecificNodes.map(n => n.data.id);
+    const linksToDelete = canvasState.tab.connections.filter(c => ids.includes(c.sourceId) || ids.includes(c.targetId));
+    for (const c of linksToDelete) {
+      await checkAndClearPayoffLink(c.sourceId, c.targetId);
+    }
     canvasState.tab.connections = canvasState.tab.connections.filter(c => 
       !ids.includes(c.sourceId) && !ids.includes(c.targetId)
     );
@@ -884,6 +896,7 @@ async function handleUnlinkNodes(data) {
         !(c.sourceId === tgtNode.data.id && c.targetId === srcNode.data.id)
       );
       if (canvasState.tab.connections.length < beforeLength) {
+        await checkAndClearPayoffLink(srcNode.data.id, tgtNode.data.id);
         count++;
       }
     }
@@ -1923,7 +1936,10 @@ function getDefaultContent(type) {
     case 'quote': return { speaker: '', text: '' };
     case 'richtext': return { delta: '' };
     case 'image': return { src: null, caption: '' };
+    case 'beatsheet': return { template: 'threeact', beats: [] };
     case 'pagelink': return { pageId: '', title: '', schemaName: '', snippet: '' };
+    case 'setup': return { setupType: 'Plant', description: '', payoffNodeId: '' };
+    case 'payoff': return { payoffType: 'Resolution', resolution: '' };
     default: return {};
   }
 }
@@ -2098,6 +2114,10 @@ function mountNode(nodeData) {
     canvasState.nodes = canvasState.nodes.filter(n => n.data.id !== nodeData.id);
     // Remove connections involving this node
     if (canvasState.tab.connections) {
+      const linksToDelete = canvasState.tab.connections.filter(c => c.sourceId === nodeData.id || c.targetId === nodeData.id);
+      for (const c of linksToDelete) {
+        await checkAndClearPayoffLink(c.sourceId, c.targetId);
+      }
       canvasState.tab.connections = canvasState.tab.connections.filter(c => c.sourceId !== nodeData.id && c.targetId !== nodeData.id);
       await saveTab(canvasState.tab);
     }
@@ -2143,6 +2163,25 @@ function mountNode(nodeData) {
           sourceId: canvasState.linkingSourceId,
           targetId: nodeId
         });
+
+        // Auto-link setup and payoff properties if matching types
+        const sourceNode = canvasState.nodes.find(n => n.data.id === canvasState.linkingSourceId);
+        const targetNode = canvasState.nodes.find(n => n.data.id === nodeId);
+        if (sourceNode && targetNode) {
+          if (sourceNode.data.type === 'setup' && targetNode.data.type === 'payoff') {
+            if (!sourceNode.data.content) sourceNode.data.content = {};
+            sourceNode.data.content.payoffNodeId = targetNode.data.id;
+            await saveNode(sourceNode.data);
+            const bodyEl = sourceNode.el.querySelector('.canvas-node-body');
+            if (bodyEl) await renderNodeBody(bodyEl, sourceNode.data);
+          } else if (sourceNode.data.type === 'payoff' && targetNode.data.type === 'setup') {
+            if (!targetNode.data.content) targetNode.data.content = {};
+            targetNode.data.content.payoffNodeId = sourceNode.data.id;
+            await saveNode(targetNode.data);
+            const bodyEl = targetNode.el.querySelector('.canvas-node-body');
+            if (bodyEl) await renderNodeBody(bodyEl, targetNode.data);
+          }
+        }
         
         await saveTab(canvasState.tab);
         await flushFileAutosave();
@@ -2290,6 +2329,24 @@ function renderCanvasGuides() {
   }
 }
 
+async function checkAndClearPayoffLink(nodeId1, nodeId2) {
+  const node1 = canvasState.nodes.find(n => n.data.id === nodeId1);
+  const node2 = canvasState.nodes.find(n => n.data.id === nodeId2);
+  if (node1 && node2) {
+    if (node1.data.type === 'setup' && node1.data.content?.payoffNodeId === node2.data.id) {
+      node1.data.content.payoffNodeId = '';
+      await saveNode(node1.data);
+      const bodyEl = node1.el.querySelector('.canvas-node-body');
+      if (bodyEl) await renderNodeBody(bodyEl, node1.data);
+    } else if (node2.data.type === 'setup' && node2.data.content?.payoffNodeId === node1.data.id) {
+      node2.data.content.payoffNodeId = '';
+      await saveNode(node2.data);
+      const bodyEl = node2.el.querySelector('.canvas-node-body');
+      if (bodyEl) await renderNodeBody(bodyEl, node2.data);
+    }
+  }
+}
+
 function drawConnections() {
   const svg = canvasState.connectionsSvg;
   if (!svg) return;
@@ -2401,6 +2458,7 @@ function drawConnections() {
       const tgtName = tgtNode.data.title || 'Node';
       if (confirm(`Delete connection line between "${srcName}" and "${tgtName}"?`)) {
         canvasState.tab.connections = canvasState.tab.connections.filter(c => c.id !== conn.id);
+        await checkAndClearPayoffLink(conn.sourceId, conn.targetId);
         await saveTab(canvasState.tab);
         await flushFileAutosave();
         drawConnections();
@@ -2447,6 +2505,7 @@ function drawConnections() {
       menu.querySelector('#conn-menu-delete').addEventListener('click', async () => {
         menu.remove();
         canvasState.tab.connections = canvasState.tab.connections.filter(c => c.id !== conn.id);
+        await checkAndClearPayoffLink(conn.sourceId, conn.targetId);
         await saveTab(canvasState.tab);
         await flushFileAutosave();
         drawConnections();
@@ -2601,6 +2660,9 @@ async function renderNodeBody(body, nodeData) {
     case 'encounter':   renderEncounter(body, nodeData); break;
     case 'flowchart':   renderFlowchart(body, nodeData); break;
     case 'progression': renderProgression(body, nodeData); break;
+    case 'beatsheet': renderBeatSheet(body, nodeData); break;
+    case 'setup':       renderSetupNode(body, nodeData); break;
+    case 'payoff':      renderPayoffNode(body, nodeData); break;
   }
 }
 
@@ -3132,6 +3194,209 @@ function renderProgression(body, nodeData) {
   };
 
   renderProgressionUI();
+}
+
+
+function renderBeatSheet(body, nodeData) {
+  const entry = canvasState.nodes.find(n => n.data.id === nodeData.id);
+  if (!nodeData.content) nodeData.content = {};
+  const c = nodeData.content;
+
+  const TEMPLATES = {
+    'threeact': {
+      name: 'Three-Act Structure',
+      beats: [
+        { name: 'Hook / Status Quo', desc: 'Introduce the ordinary world and stakes.' },
+        { name: 'Inciting Incident', desc: 'An event disrupts the ordinary world, forcing action.' },
+        { name: 'Plot Point 1', desc: 'The protagonist commits to the journey and enters Act II.' },
+        { name: 'Midpoint', desc: 'A major shift in stakes, turning point, or false victory/defeat.' },
+        { name: 'Plot Point 2', desc: 'All hope is lost; the protagonist finds the final key or resolution.' },
+        { name: 'Climax & Resolution', desc: 'The final showdown; return to a new status quo.' }
+      ]
+    },
+    'savethecat': {
+      name: 'Save the Cat! Beat Sheet',
+      beats: [
+        { name: 'Opening Image', desc: 'Snapshot of the protagonist\'s starting life.' },
+        { name: 'Theme Stated', desc: 'A hint of what the protagonist must learn.' },
+        { name: 'Setup', desc: 'Establish the stakes and the protagonist\'s flaws.' },
+        { name: 'Catalyst', desc: 'The life-changing event.' },
+        { name: 'Debate', desc: 'The protagonist hesitates or decides what to do.' },
+        { name: 'Break Into Two', desc: 'Act II begins.' },
+        { name: 'B Story', desc: 'Subplot begins, often a relationship.' },
+        { name: 'Fun and Games', desc: 'Deliver on the premise\'s promise.' },
+        { name: 'Midpoint', desc: 'A major turning point; stakes are raised.' },
+        { name: 'Bad Guys Close In', desc: 'Pressure builds; internal/external threats grow.' },
+        { name: 'All Hope Is Lost', desc: 'A massive defeat; the lowest point.' },
+        { name: 'Dark Night of the Soul', desc: 'Protagonist reflects on their flaws.' },
+        { name: 'Break Into Three', desc: 'An epiphany provides a new plan.' },
+        { name: 'Finale', desc: 'Executing the plan; conquering the climax.' },
+        { name: 'Final Image', desc: 'Snapshot showing how the protagonist has changed.' }
+      ]
+    },
+    'herosjourney': {
+      name: 'Hero\'s Journey',
+      beats: [
+        { name: 'Ordinary World', desc: 'Show the hero in their normal surroundings.' },
+        { name: 'Call to Adventure', desc: 'A challenge or quest is presented.' },
+        { name: 'Refusal of the Call', desc: 'The hero hesitates out of fear or duty.' },
+        { name: 'Meeting the Mentor', desc: 'A wise figure gives advice or tools.' },
+        { name: 'Crossing the Threshold', desc: 'The hero enters the special world.' },
+        { name: 'Tests, Allies, Enemies', desc: 'The hero faces trials, makes friends.' },
+        { name: 'Approach to the Inmost Cave', desc: 'Preparing to face the challenge.' },
+        { name: 'The Ordeal', desc: 'A life-or-death crisis.' },
+        { name: 'Reward (Seizing Sword)', desc: 'The hero gains the treasure or knowledge.' },
+        { name: 'The Road Back', desc: 'Forces chase the hero as they return.' },
+        { name: 'Resurrection', desc: 'A final test of what the hero has learned.' },
+        { name: 'Return with the Elixir', desc: 'The hero returns home with benefits.' }
+      ]
+    }
+  };
+
+  if (!c.template) c.template = 'threeact';
+  if (!c.beats || c.beats.length === 0) {
+    if (c.template === 'custom') {
+      c.beats = [{ name: 'Intro Scene', desc: 'Custom scene outline.', completed: false, synopsis: '' }];
+    } else {
+      c.beats = TEMPLATES[c.template].beats.map(b => ({ ...b, completed: false, synopsis: '' }));
+    }
+  }
+
+  const renderBeatSheetUI = () => {
+    const isCustom = c.template === 'custom';
+    body.innerHTML = `
+      <div class="canvas-beatsheet" style="display: flex; flex-direction: column; gap: 8px; height: 100%; box-sizing: border-box; font-family: var(--font-hud); font-size: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+          <label style="color: var(--text-muted); font-size: 0.6rem; text-transform: uppercase; margin: 0; font-weight: bold;">Outline Structure</label>
+          <select id="bs-template-select" class="form-input" style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); padding: 2px 4px; font-size: 0.72rem; border-radius: 4px; width: auto; color: var(--text);">
+            <option value="threeact" ${c.template === 'threeact' ? 'selected' : ''}>Three-Act Structure</option>
+            <option value="savethecat" ${c.template === 'savethecat' ? 'selected' : ''}>Save the Cat!</option>
+            <option value="herosjourney" ${c.template === 'herosjourney' ? 'selected' : ''}>Hero's Journey</option>
+            <option value="custom" ${c.template === 'custom' ? 'selected' : ''}>Custom Structure</option>
+          </select>
+        </div>
+        
+        <div class="hud-divider" style="margin: 2px 0;"></div>
+
+        <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px;" class="custom-scrollbar">
+          ${c.beats.map((b, idx) => {
+            const completed = !!b.completed;
+            return `
+              <div class="bs-beat-item" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 6px; display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                  <div style="display: flex; align-items: center; gap: 6px; font-weight: bold; flex: 1; color: ${completed ? 'var(--accent-green, #10b981)' : 'var(--text)'}; font-family: var(--font-hud);">
+                    <input type="checkbox" class="bs-beat-check" data-index="${idx}" ${completed ? 'checked' : ''} style="cursor: pointer;" />
+                    ${isCustom ? `
+                      <input type="text" class="bs-beat-name-input" data-index="${idx}" value="${escHtml(b.name)}" placeholder="Step Name" style="background: transparent; border: none; border-bottom: 1px dashed rgba(255,255,255,0.15); font-size: 0.72rem; color: inherit; font-weight: bold; padding: 0 2px; width: 100%; outline: none; ${completed ? 'text-decoration: line-through; opacity: 0.7;' : ''}" />
+                    ` : `
+                      <span style="font-size: 0.72rem; ${completed ? 'text-decoration: line-through; opacity: 0.7;' : ''}">${b.name}</span>
+                    `}
+                  </div>
+                  ${isCustom ? `
+                    <button class="bs-beat-delete" data-index="${idx}" title="Delete step" style="background: transparent; border: none; color: var(--accent-red, #f43f5e); cursor: pointer; font-size: 0.8rem; padding: 2px 4px; line-height: 1;">✕</button>
+                  ` : `
+                    <span style="font-size: 0.58rem; color: var(--text-muted); cursor: help;" title="${escHtml(b.desc)}">ⓘ Guide</span>
+                  `}
+                </div>
+                <textarea class="form-input bs-beat-synopsis" data-index="${idx}" placeholder="Write scene outline here..." rows="2" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); padding: 4px; border-radius: 4px; font-size: 0.72rem; width: 100%; color: var(--text); resize: none; box-sizing: border-box;">${escHtml(b.synopsis || '')}</textarea>
+              </div>
+            `;
+          }).join('')}
+          ${isCustom ? `
+            <button class="bs-beat-add" style="width: 100%; padding: 4px 8px; font-size: 0.7rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 4px; color: var(--text-muted); cursor: pointer; border: 1px dashed rgba(255,255,255,0.15); background: transparent; transition: all 0.2s;" onmouseenter="this.style.borderColor='rgba(255,255,255,0.3)';this.style.color='var(--text)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.15)';this.style.color='var(--text-muted)'">
+              <span>➕</span> Add Outline Step
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+
+    body.querySelector('#bs-template-select').addEventListener('change', e => {
+      const val = e.target.value;
+      if (val !== 'custom' && c.template === 'custom' && c.beats.length > 0) {
+        if (!confirm('Switching to a predefined template will overwrite your custom steps. Continue?')) {
+          e.target.value = 'custom';
+          return;
+        }
+      }
+      c.template = val;
+      if (val === 'custom') {
+        // Convert current beats or populate default if empty
+        if (!c.beats || c.beats.length === 0) {
+          c.beats = [{ name: 'Intro Scene', desc: 'Custom scene outline.', completed: false, synopsis: '' }];
+        }
+      } else {
+        c.beats = TEMPLATES[val].beats.map(b => ({ ...b, completed: false, synopsis: '' }));
+      }
+      renderBeatSheetUI();
+      if (entry) scheduleNodeSave(entry);
+    });
+
+    body.querySelectorAll('.bs-beat-check').forEach(chk => {
+      chk.addEventListener('change', e => {
+        const idx = parseInt(chk.dataset.index);
+        c.beats[idx].completed = e.target.checked;
+        const nameInput = chk.nextElementSibling;
+        const parent = chk.closest('.bs-beat-item');
+        if (e.target.checked) {
+          if (nameInput) {
+            nameInput.style.textDecoration = 'line-through';
+            nameInput.style.opacity = '0.7';
+          }
+          if (parent) {
+            chk.parentNode.style.color = 'var(--accent-green, #10b981)';
+          }
+        } else {
+          if (nameInput) {
+            nameInput.style.textDecoration = 'none';
+            nameInput.style.opacity = '1';
+          }
+          if (parent) {
+            chk.parentNode.style.color = 'var(--text)';
+          }
+        }
+        if (entry) scheduleNodeSave(entry);
+      });
+    });
+
+    body.querySelectorAll('.bs-beat-name-input').forEach(input => {
+      input.addEventListener('input', e => {
+        const idx = parseInt(input.dataset.index);
+        c.beats[idx].name = e.target.value;
+        if (entry) scheduleNodeSave(entry);
+      });
+    });
+
+    body.querySelectorAll('.bs-beat-delete').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const idx = parseInt(btn.dataset.index);
+        c.beats.splice(idx, 1);
+        renderBeatSheetUI();
+        if (entry) scheduleNodeSave(entry);
+      });
+    });
+
+    const addBtn = body.querySelector('.bs-beat-add');
+    if (addBtn) {
+      addBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        c.beats.push({ name: 'New Step', desc: 'Custom scene outline.', completed: false, synopsis: '' });
+        renderBeatSheetUI();
+        if (entry) scheduleNodeSave(entry);
+      });
+    }
+
+    body.querySelectorAll('.bs-beat-synopsis').forEach(tx => {
+      tx.addEventListener('input', e => {
+        const idx = parseInt(tx.dataset.index);
+        c.beats[idx].synopsis = e.target.value;
+        if (entry) scheduleNodeSave(entry);
+      });
+    });
+  };
+
+  renderBeatSheetUI();
 }
 
 
@@ -3716,6 +3981,146 @@ function renderQuote(body, nodeData) {
 
   body.querySelector('.canvas-quote-text').addEventListener('input', e => { c.text = e.target.value; if (entry) scheduleNodeSave(entry); });
   body.querySelector('.canvas-quote-speaker').addEventListener('input', e => { c.speaker = e.target.value; if (entry) scheduleNodeSave(entry); });
+}
+
+function renderSetupNode(body, nodeData) {
+  const entry = canvasState.nodes.find(n => n.data.id === nodeData.id);
+  if (!nodeData.content) nodeData.content = {};
+  const c = nodeData.content;
+  if (!c.setupType) c.setupType = 'Plant';
+  if (!c.description) c.description = '';
+  if (!c.payoffNodeId) c.payoffNodeId = '';
+
+  const payoffNodes = canvasState.nodes.filter(n => n.data.type === 'payoff');
+  
+  body.innerHTML = `
+    <div class="canvas-setup-wrap" style="display: flex; flex-direction: column; gap: 8px; height: 100%; box-sizing: border-box; padding: 4px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label style="font-size: 10px; color: var(--text-muted); font-family: var(--font-hud, monospace); text-transform: uppercase;">Setup Type</label>
+        <select class="canvas-select setup-type-select" style="width: 100%; font-size: 11px;">
+          ${['Plant', "Chekhov's Gun", 'Character Flaw', 'Foreshadowing', 'Mystery Clue'].map(t => `
+            <option value="${t}" ${c.setupType === t ? 'selected' : ''}>${t}</option>
+          `).join('')}
+        </select>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+        <label style="font-size: 10px; color: var(--text-muted); font-family: var(--font-hud, monospace); text-transform: uppercase;">Description</label>
+        <textarea class="canvas-textarea setup-desc-textarea" placeholder="Establish the clue, flaw, or gun..." style="flex: 1; min-height: 50px; font-size: 11px; color: var(--text-primary); background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px; outline: none;">${escHtml(c.description)}</textarea>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label style="font-size: 10px; color: var(--text-muted); font-family: var(--font-hud, monospace); text-transform: uppercase;">Linked Payoff</label>
+        <select class="canvas-select setup-payoff-select" style="width: 100%; font-size: 11px;">
+          <option value="">— Unresolved —</option>
+          ${payoffNodes.map(p => `
+            <option value="${p.data.id}" ${c.payoffNodeId === p.data.id ? 'selected' : ''}>${escHtml(p.data.title || `Payoff Node (${p.data.id.substring(0, 4)})`)}</option>
+          `).join('')}
+        </select>
+      </div>
+      <div style="font-size: 9px; color: var(--text-muted); line-height: 1.3; font-style: italic; margin-top: 2px;">
+        💡 Tip: Draw a connection line (🔗) from this Setup Node to a Payoff Node on your canvas to link them.
+      </div>
+    </div>
+  `;
+
+  const setupTypeSelect = body.querySelector('.setup-type-select');
+  const setupDescTextarea = body.querySelector('.setup-desc-textarea');
+  const setupPayoffSelect = body.querySelector('.setup-payoff-select');
+
+  setupTypeSelect.addEventListener('change', e => {
+    c.setupType = e.target.value;
+    if (entry) scheduleNodeSave(entry);
+  });
+  setupDescTextarea.addEventListener('input', e => {
+    c.description = e.target.value;
+    if (entry) scheduleNodeSave(entry);
+  });
+  setupPayoffSelect.addEventListener('change', async e => {
+    const val = e.target.value;
+    const oldVal = c.payoffNodeId;
+    c.payoffNodeId = val;
+    if (entry) scheduleNodeSave(entry);
+
+    if (!canvasState.tab.connections) canvasState.tab.connections = [];
+
+    // Remove connection to old linked payoff node
+    if (oldVal) {
+      canvasState.tab.connections = canvasState.tab.connections.filter(conn => 
+        !(conn.sourceId === nodeData.id && conn.targetId === oldVal) &&
+        !(conn.sourceId === oldVal && conn.targetId === nodeData.id)
+      );
+    }
+
+    // Add connection to new linked payoff node
+    if (val) {
+      const exists = canvasState.tab.connections.some(conn => 
+        (conn.sourceId === nodeData.id && conn.targetId === val) ||
+        (conn.sourceId === val && conn.targetId === nodeData.id)
+      );
+      if (!exists) {
+        canvasState.tab.connections.push({
+          id: generateId(),
+          sourceId: nodeData.id,
+          targetId: val
+        });
+      }
+    }
+
+    await saveTab(canvasState.tab);
+    await flushFileAutosave();
+    drawConnections();
+    if (canvasState.tab && canvasState.tab.beatId) {
+      await syncBeatWithCanvas();
+    }
+  });
+
+  // Re-populate options on focus to catch any newly created payoff nodes
+  setupPayoffSelect.addEventListener('focus', () => {
+    const currentVal = c.payoffNodeId;
+    const currentPayoffs = canvasState.nodes.filter(n => n.data.type === 'payoff');
+    setupPayoffSelect.innerHTML = `
+      <option value="">— Unresolved —</option>
+      ${currentPayoffs.map(p => `
+        <option value="${p.data.id}" ${currentVal === p.data.id ? 'selected' : ''}>${escHtml(p.data.title || `Payoff Node (${p.data.id.substring(0, 4)})`)}</option>
+      `).join('')}
+    `;
+  });
+}
+
+function renderPayoffNode(body, nodeData) {
+  const entry = canvasState.nodes.find(n => n.data.id === nodeData.id);
+  if (!nodeData.content) nodeData.content = {};
+  const c = nodeData.content;
+  if (!c.payoffType) c.payoffType = 'Resolution';
+  if (!c.resolution) c.resolution = '';
+
+  body.innerHTML = `
+    <div class="canvas-payoff-wrap" style="display: flex; flex-direction: column; gap: 8px; height: 100%; box-sizing: border-box; padding: 4px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label style="font-size: 10px; color: var(--text-muted); font-family: var(--font-hud, monospace); text-transform: uppercase;">Payoff Type</label>
+        <select class="canvas-select payoff-type-select" style="width: 100%; font-size: 11px;">
+          ${['Resolution', 'Subversion', 'Climax Twist', 'Overcoming Flaw'].map(t => `
+            <option value="${t}" ${c.payoffType === t ? 'selected' : ''}>${t}</option>
+          `).join('')}
+        </select>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+        <label style="font-size: 10px; color: var(--text-muted); font-family: var(--font-hud, monospace); text-transform: uppercase;">Resolution Description</label>
+        <textarea class="canvas-textarea payoff-resolution-textarea" placeholder="How is this setup resolved/paid off?..." style="flex: 1; min-height: 60px; font-size: 11px; color: var(--text-primary); background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px; outline: none;">${escHtml(c.resolution)}</textarea>
+      </div>
+      <div style="font-size: 9px; color: var(--text-muted); line-height: 1.3; font-style: italic; margin-top: 2px;">
+        💡 Tip: Draw a connection line (🔗) from a Setup Node to this Payoff Node to resolve your plot threads.
+      </div>
+    </div>
+  `;
+
+  body.querySelector('.payoff-type-select').addEventListener('change', e => {
+    c.payoffType = e.target.value;
+    if (entry) scheduleNodeSave(entry);
+  });
+  body.querySelector('.payoff-resolution-textarea').addEventListener('input', e => {
+    c.resolution = e.target.value;
+    if (entry) scheduleNodeSave(entry);
+  });
 }
 
 // Rich Page Link Card Renderer
@@ -6048,7 +6453,16 @@ function enterZenFocusMode(entry) {
     <div class="zen-focus-container">
       <div class="zen-focus-header">
         <span class="zen-focus-title">📖 ${escHtml(nodeData.title || 'Scene Focus')}</span>
-        <button id="zen-exit-btn" class="zen-focus-exit-btn">Exit Focus ↩</button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:3px 8px;" title="Font size">
+            <span style="font-size:0.62rem; color:var(--text-muted); font-family:var(--font-hud);">Aa</span>
+            <input type="number" id="zen-font-size" min="10" max="36" value="18" step="1"
+              style="width:38px; background:transparent; border:none; outline:none; color:var(--text-primary); font-size:0.78rem; font-family:var(--font-hud); text-align:center; cursor:ns-resize;"
+              title="Font size (pt)">
+            <span style="font-size:0.62rem; color:var(--text-muted); font-family:var(--font-hud);">pt</span>
+          </div>
+          <button id="zen-exit-btn" class="zen-focus-exit-btn" title="Exit focus mode (Esc)">Exit Focus ↩</button>
+        </div>
       </div>
       <div class="zen-focus-editor-wrapper" id="zen-editor-mount"></div>
       <div class="zen-focus-audio-bar">
@@ -6058,6 +6472,13 @@ function enterZenFocusMode(entry) {
         <div class="zen-audio-slider-wrap" style="display: inline-flex; align-items: center; gap: 4px; margin-left: 6px;">
           <input type="range" id="zen-audio-rain-vol" min="0" max="100" value="50" style="width: 55px; height: 3px; accent-color: var(--accent-primary); cursor: pointer; border: none; outline: none; background: rgba(255,255,255,0.15);" title="Rain Volume">
         </div>
+        <div style="display:inline-flex; align-items:center; gap:6px; margin-left:8px; padding-left:8px; border-left:1px solid rgba(255,255,255,0.08);" title="Background color">
+          <span style="font-size:0.68rem; color:var(--text-muted); font-family:var(--font-hud);">BG</span>
+          <div id="zen-bg-swatch" style="width:18px; height:18px; border-radius:4px; background:#0c0a08; border:1px solid rgba(255,255,255,0.2); cursor:pointer; position:relative; transition:transform 0.15s;" title="Change background color">
+            <input type="color" id="zen-bg-color" value="#0c0a08"
+              style="position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; border:none; padding:0;">
+          </div>
+        </div>
         <span id="zen-word-count" style="font-size:0.68rem; color:var(--text-muted); font-family:var(--font-hud); margin-left:auto;"></span>
       </div>
     </div>
@@ -6065,6 +6486,31 @@ function enterZenFocusMode(entry) {
 
   document.body.appendChild(overlay);
   setTimeout(() => overlay.classList.add('open'), 10);
+
+  // Load background color & font size from localStorage
+  const savedBgColor = localStorage.getItem('forge-zen-bg-color') || '#0c0a08';
+  const savedFontSize = localStorage.getItem('forge-zen-font-size') || '18';
+
+  // Apply saved background color immediately
+  overlay.style.backgroundColor = savedBgColor;
+
+  const bgPicker = overlay.querySelector('#zen-bg-color');
+  const bgSwatch = overlay.querySelector('#zen-bg-swatch');
+  const fontSizeInput = overlay.querySelector('#zen-font-size');
+
+  if (bgPicker) bgPicker.value = savedBgColor;
+  if (bgSwatch) bgSwatch.style.backgroundColor = savedBgColor;
+  if (fontSizeInput) fontSizeInput.value = savedFontSize;
+
+  // Background color listener
+  if (bgPicker) {
+    bgPicker.addEventListener('input', function() {
+      const color = this.value;
+      overlay.style.backgroundColor = color;
+      if (bgSwatch) bgSwatch.style.backgroundColor = color;
+      localStorage.setItem('forge-zen-bg-color', color);
+    });
+  }
 
   // Initialize audio synth
   _zenSynth = new ForgeAudioSynth();
@@ -6087,6 +6533,64 @@ function enterZenFocusMode(entry) {
       initialContent: initialContent,
       minimal: false
     }).then(zenEditor => {
+      // Apply saved font size
+      if (zenEditor && zenEditor.quill) {
+        zenEditor.quill.root.style.fontSize = savedFontSize + 'pt';
+      }
+
+      // Add tooltips to Quill toolbar
+      const toolbar = overlay.querySelector('.ql-toolbar');
+      if (toolbar) {
+        const buttonTitles = {
+          'bold': 'Bold (Ctrl+B)',
+          'italic': 'Italic (Ctrl+I)',
+          'underline': 'Underline (Ctrl+U)',
+          'strike': 'Strikethrough',
+          'blockquote': 'Blockquote',
+          'code-block': 'Code Block',
+          'header[value="1"]': 'Heading 1',
+          'header[value="2"]': 'Heading 2',
+          'list[value="ordered"]': 'Numbered List',
+          'list[value="bullet"]': 'Bulleted List',
+          'script[value="sub"]': 'Subscript',
+          'script[value="super"]': 'Superscript',
+          'indent[value="-1"]': 'Decrease Indent',
+          'indent[value="+1"]': 'Increase Indent',
+          'direction[value="rtl"]': 'Right to Left Text',
+          'align': 'Align Text',
+          'color': 'Text Color',
+          'background': 'Background Highlight Color',
+          'clean': 'Clear Formatting',
+          'link': 'Insert Link',
+          'image': 'Insert Image',
+          'video': 'Insert Video',
+          'formula': 'Insert Formula'
+        };
+        for (const [selector, title] of Object.entries(buttonTitles)) {
+          const btn = toolbar.querySelector(`.ql-${selector}`);
+          if (btn) btn.setAttribute('title', title);
+        }
+        toolbar.querySelectorAll('.ql-picker').forEach(picker => {
+          if (picker.classList.contains('ql-size')) picker.setAttribute('title', 'Font Size Preset');
+          if (picker.classList.contains('ql-font')) picker.setAttribute('title', 'Font Style');
+          if (picker.classList.contains('ql-header')) picker.setAttribute('title', 'Heading Style');
+          if (picker.classList.contains('ql-align')) picker.setAttribute('title', 'Alignment');
+          if (picker.classList.contains('ql-color')) picker.setAttribute('title', 'Text Color');
+          if (picker.classList.contains('ql-background')) picker.setAttribute('title', 'Background Color');
+        });
+      }
+
+      // Listen for font size changes
+      if (fontSizeInput) {
+        fontSizeInput.addEventListener('input', function() {
+          const val = Math.max(10, Math.min(36, parseInt(this.value) || 18));
+          localStorage.setItem('forge-zen-font-size', val);
+          if (zenEditor && zenEditor.quill) {
+            zenEditor.quill.root.style.fontSize = val + 'pt';
+          }
+        });
+      }
+
       // Sync content back on change
       const wcLabel = overlay.querySelector('#zen-word-count');
       zenEditor.quill.on('text-change', () => {
@@ -6116,6 +6620,11 @@ function enterZenFocusMode(entry) {
           nodeData.content.delta = content;
           scheduleNodeSave(entry);
           renderWordGoalRing(nodeData);
+
+          // Update card editor if it exists (prevents stale text overwrites)
+          if (entry.quillEditor && entry.quillEditor.getContent() !== content) {
+            entry.quillEditor.setContent(content);
+          }
         }
 
         // Update word count

@@ -22,6 +22,7 @@ let ceState = {
   pages: [],
   isScanning: false,
   lastScanned: null,
+  project: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -48,6 +49,9 @@ const TYPE_CONFIG = {
   DEAD_NPC_IN_PREP:       { label: 'Dead NPC in Prep',        icon: '💀', color: '#facc15' },
   BROKEN_PREREQ:          { label: 'Broken Prerequisite',     icon: '🎛️', color: '#f43f5e' },
   INPUT_CONFLICT:         { label: 'Input Conflict',          icon: '🎮', color: '#facc15' },
+  EMPTY_MOTIVATION:       { label: 'Empty Motivation',        icon: '🎯', color: '#facc15' },
+  ABSENCE_GAP:            { label: 'Absence Gap',             icon: '⚠️', color: '#f97316' },
+  SIMULTANEOUS_BEAT:      { label: 'Simultaneous Beat',       icon: '⏱️', color: '#f43f5e' },
 };
 
 function formatRelativeTime(isoStr) {
@@ -93,6 +97,41 @@ function injectStyles() {
       background: var(--bg-deep);
       overflow: hidden;
       box-sizing: border-box;
+    }
+    
+    /* ---- Health Gauge ---- */
+    .ce-health-gauge-container {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: rgba(15, 12, 28, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 16px 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(12px);
+    }
+    .ce-investigation-path {
+      margin-top: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .ce-investigation-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-family: var(--font-hud, monospace);
+      color: var(--accent-primary);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .ce-investigation-steps {
+      margin: 0;
+      padding-left: 16px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
     }
 
     /* ---- Header ---- */
@@ -394,6 +433,48 @@ function buildStatusPillContent() {
   return `Not yet scanned`;
 }
 
+function getInvestigationSteps(issue) {
+  switch (issue.type) {
+    case 'BROKEN_PREREQ':
+      return [
+        'Open the <strong>Plot Timeline</strong> (Roadmap) view.',
+        'Locate the conflicting beats highlighted in the description.',
+        'Drag the prerequisite beat to the left of the dependent beat, or open the beat inspector and remove the prerequisite.'
+      ];
+    case 'DEAD_END_THREAD':
+      return [
+        'Navigate to the active beat workspace canvas.',
+        'Locate the unresolved <strong>Setup Node</strong>.',
+        'Create a <strong>Payoff Node</strong> (or find an existing one) representing the resolution.',
+        'Use the <strong>Link Tool (🔗)</strong> in the toolbar to draw a connection line between the two nodes.'
+      ];
+    case 'EMPTY_MOTIVATION':
+      return [
+        'Go to the character database entry by clicking the page link below.',
+        'In the document editor, expand the <strong>Motivations & Goals</strong> field or backstory section.',
+        'Flesh out the character motivations to resolve this warning.'
+      ];
+    case 'ABSENCE_GAP':
+      return [
+        'Review the Act II chapters to check where this character could play a role.',
+        'Open the timeline beat inspector, go to <strong>Linked Entries</strong>, and associate the character with an Act II beat.',
+        'Alternatively, add a lore card to Act II explaining their off-screen activities.'
+      ];
+    case 'SIMULTANEOUS_BEAT':
+      return [
+        'Open the <strong>Plot Timeline</strong> roadmap.',
+        'Find the two parallel beats occurring at the same horizontal time slot.',
+        'Reposition one of the beats to a different horizontal coordinate, or remove the character from the linked entries of one beat.'
+      ];
+    default:
+      return [
+        'Click the page link below to navigate to the affected document.',
+        'Review the description details for context.',
+        'Update properties or links as suggested to clear the issue.'
+      ];
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Render Issue Card
 // ---------------------------------------------------------------------------
@@ -460,6 +541,23 @@ function renderIssueCard(issue, isResolved) {
     card.appendChild(sug);
   }
 
+  // ---- Investigation Path ----
+  const styleId = ceState.project?.settings?.style || 'story';
+  if (styleId === 'story' && !isResolved) {
+    const steps = getInvestigationSteps(issue);
+    if (steps && steps.length > 0) {
+      const pathDiv = document.createElement('div');
+      pathDiv.className = 'ce-investigation-path';
+      pathDiv.innerHTML = `
+        <div class="ce-investigation-title">📋 Suggested Investigation Path</div>
+        <ol class="ce-investigation-steps" style="margin: 0; padding-left: 16px;">
+          ${steps.map(s => `<li>${s}</li>`).join('')}
+        </ol>
+      `;
+      card.appendChild(pathDiv);
+    }
+  }
+
   // ---- Page links ----
   const pageIds = Array.isArray(issue.pageIds) ? issue.pageIds : [];
   if (pageIds.length > 0) {
@@ -523,6 +621,7 @@ function getFilteredIssues() {
 }
 
 function rerenderList() {
+  updateHealthGauge();
   if (!listEl) return;
   listEl.innerHTML = '';
 
@@ -603,6 +702,7 @@ function reloadIssues() {
 
 let statusPillEl = null;
 let scanBtnEl = null;
+let healthGaugeEl = null;
 
 function refreshStatusPill() {
   if (!statusPillEl) return;
@@ -612,6 +712,44 @@ function refreshStatusPill() {
   } else {
     statusPillEl.classList.remove('scanning');
   }
+}
+
+function calculateStoryHealthScore(issues) {
+  let score = 100;
+  issues.forEach(issue => {
+    if (issue.severity === 'high') score -= 10;
+    else if (issue.severity === 'medium') score -= 5;
+    else score -= 2;
+  });
+  return Math.max(score, 0);
+}
+
+function updateHealthGauge() {
+  if (!healthGaugeEl) return;
+  const project = ceState.project;
+  const styleId = project?.settings?.style || 'story';
+  if (styleId !== 'story') {
+    healthGaugeEl.style.display = 'none';
+    return;
+  }
+  
+  healthGaugeEl.style.display = 'flex';
+  const score = calculateStoryHealthScore(ceState.issues);
+  const color = score > 80 ? '#10b981' : score > 50 ? '#e5a93b' : '#f43f5e';
+  
+  healthGaugeEl.innerHTML = `
+    <div style="position: relative; width: 64px; height: 64px; flex-shrink: 0;">
+      <svg width="64" height="64" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
+        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="3" />
+        <path stroke-dasharray="${score}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" style="transition: stroke-dasharray 0.35s ease;" />
+      </svg>
+      <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; font-family: var(--font-hud, monospace); color: #fff;">${score}%</div>
+    </div>
+    <div>
+      <h3 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: #fff;">Story Health Score</h3>
+      <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: var(--text-muted);">${ceState.issues.length} active warnings / plot holes detected.</p>
+    </div>
+  `;
 }
 
 // ---------------------------------------------------------------------------
@@ -624,6 +762,7 @@ export async function renderContinuityEngine(container) {
   tabEls = {};
   statusPillEl = null;
   scanBtnEl = null;
+  healthGaugeEl = null;
 
   // Reset state
   ceState.activeTab = 'all';
@@ -642,11 +781,13 @@ export async function renderContinuityEngine(container) {
       </div>`;
     return;
   }
+  ceState.project = project;
+  const styleId = project.settings?.style || 'story';
 
   // Load pages for name resolution
   try {
     ceState.pages = (await getPages(project.id)) || [];
-  } catch {
+  } catch (err) {
     ceState.pages = [];
   }
 
@@ -671,11 +812,13 @@ export async function renderContinuityEngine(container) {
 
   const titleEl = document.createElement('h1');
   titleEl.className = 'ce-title';
-  titleEl.textContent = 'Continuity Engine';
+  titleEl.textContent = styleId === 'story' ? 'Plot Hole Inspector' : 'Continuity Engine';
 
   const subtitleEl = document.createElement('p');
   subtitleEl.className = 'ce-subtitle';
-  subtitleEl.textContent = 'Ignis monitors your world for narrative inconsistencies';
+  subtitleEl.textContent = styleId === 'story' 
+    ? 'Ignis scans your narrative structure to detect plot holes and structural gaps'
+    : 'Ignis monitors your world for narrative inconsistencies';
 
   titleBlock.appendChild(titleEl);
   titleBlock.appendChild(subtitleEl);
@@ -723,6 +866,14 @@ export async function renderContinuityEngine(container) {
   header.appendChild(titleBlock);
   header.appendChild(headerActions);
   root.appendChild(header);
+
+  // -- Health Gauge (radial progress bar) --
+  if (styleId === 'story') {
+    healthGaugeEl = document.createElement('div');
+    healthGaugeEl.className = 'ce-health-gauge-container';
+    root.appendChild(healthGaugeEl);
+    updateHealthGauge();
+  }
 
   // -- Tabs --
   const tabs = document.createElement('div');
@@ -797,6 +948,7 @@ export async function renderContinuityEngine(container) {
     listEl = null;
     statusPillEl = null;
     scanBtnEl = null;
+    healthGaugeEl = null;
     tabEls = {};
   };
 }

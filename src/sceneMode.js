@@ -88,7 +88,7 @@ function _buildDrawer() {
 
   _drawer.innerHTML = `
     <!-- ── Header ── -->
-    <header class="scene-mode-header">
+    <header class="scene-mode-header" style="border-bottom: none; padding-bottom: 8px;">
       <div class="scene-mode-header-left">
         <div class="scene-mode-logo">
           <span class="scene-mode-logo-icon">🎬</span>
@@ -100,6 +100,12 @@ function _buildDrawer() {
       </div>
       <button class="scene-mode-close-btn" id="scene-mode-close-btn" aria-label="Close Scene Mode" title="Close">✕</button>
     </header>
+
+    <!-- Mode Toggle: Chat Mode vs Scene Mode (active) -->
+    <div class="scene-mode-tabs" style="display: flex; padding: 3px; background: rgba(0,0,0,0.35); border-radius: 8px; margin: 0 16px 12px; border: 1px solid var(--border-subtle); gap: 4px;">
+      <button id="scene-mode-chat-btn" style="flex: 1; background: transparent; border: none; color: var(--text-secondary); font-size: 10px; font-weight: 600; padding: 6px; border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-hud);">💬 Chat</button>
+      <button id="scene-mode-scene-btn" class="active" style="flex: 1; background: rgba(255,255,255,0.08); border: none; color: #fff; font-size: 10px; font-weight: 600; padding: 6px; border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-hud);">🎬 Scene Mode</button>
+    </div>
 
     <!-- ── Scrollable Body ── -->
     <div class="scene-mode-body">
@@ -252,6 +258,15 @@ function _bindEvents() {
   // Close button
   document.getElementById('scene-mode-close-btn')
     .addEventListener('click', () => toggleSceneMode(false));
+
+  // Chat Mode toggle
+  document.getElementById('scene-mode-chat-btn')
+    .addEventListener('click', () => {
+      import('./ai.js').then(({ toggleAiDrawer }) => {
+        toggleSceneMode(false);
+        toggleAiDrawer(true);
+      });
+    });
 
   // Collapsible context section
   document.getElementById('scene-context-toggle')

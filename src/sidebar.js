@@ -12,7 +12,6 @@ import { toggleSceneMode } from './sceneMode.js';
 import { getContinuityIssues, clearContinuityIssues } from './continuityMonitor.js';
 import { getStyleConfig } from './styleConfig.js';
 
-let collapsed = false;
 let schemaListEl = null;
 let currentRefreshId = 0;
 
@@ -28,11 +27,10 @@ export async function renderSidebar() {
   }
   sidebar.style.display = 'flex';
 
-  // Restore collapsed state
-  const savedCollapsed = localStorage.getItem('forge-sidebar-collapsed');
-  if (savedCollapsed === 'true') {
-    collapsed = true;
-    sidebar.classList.add('collapsed');
+  // Sidebar is icon-only by default; 'pinned' means expanded/locked open
+  const savedPinned = localStorage.getItem('forge-sidebar-pinned');
+  if (savedPinned === 'true') {
+    sidebar.classList.add('pinned');
   }
 
   // Header (Forge logo + Collapse Toggle)
@@ -51,36 +49,50 @@ export async function renderSidebar() {
   logoWrapper.style.overflow = 'hidden';
   logoWrapper.style.cursor = 'pointer';
   logoWrapper.innerHTML = `
-    <svg class="sidebar-logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0; width: 24px; height: 24px;">
-      <path d="M38 4 L18 28 H28 L20 60 L46 32 H36 Z" fill="var(--accent-primary)" opacity="0.9" stroke="var(--accent-primary)" stroke-width="1.5" stroke-linejoin="round"/>
+    <svg class="sidebar-logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0; width: 32px; height: 32px;">
+      <defs>
+        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="var(--accent-amber-light, #fbbf24)" />
+          <stop offset="100%" stop-color="var(--accent-amber, #f59e0b)" />
+        </linearGradient>
+      </defs>
+      <!-- Outer Hexagon Shell -->
+      <path d="M32 3 L59 18 V49 L32 64 L5 49 V18 Z" stroke="url(#logoGrad)" stroke-width="1.5" opacity="0.25" stroke-dasharray="3 3" />
+      <!-- Inner Hexagon Shield -->
+      <path d="M32 7 L53 19 V45 L32 57 L11 45 V19 Z" fill="url(#logoGrad)" fill-opacity="0.08" stroke="url(#logoGrad)" stroke-width="2" stroke-linejoin="round" />
+      <!-- Stylized capital F -->
+      <path d="M22 18 H42 V24 H30 V30 H38 V36 H30 V46 H22 Z" fill="#ffffff" />
+      <!-- Stylized integrated amber lightning bolt cutout/accent -->
+      <path d="M35 29 L23 41 H31 L26 47" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
     </svg>
-    <span class="sidebar-title" style="font-weight: 700; letter-spacing: 0.1em; color: var(--text-primary);">FORGE</span>
+    <span class="sidebar-title" style="font-weight: 900; letter-spacing: 0.22em; color: var(--text-primary); font-family: var(--font-heading); font-size: 18px; margin-left: 8px;">FORGE</span>
   `;
 
+
   logoWrapper.addEventListener('click', () => {
-    if (collapsed) {
-      collapsed = false;
-      sidebar.classList.remove('collapsed');
-      collapseBtn.innerHTML = `<i data-lucide="panel-left-close"></i>`;
-      localStorage.setItem('forge-sidebar-collapsed', 'false');
-      refreshIcons();
-    }
+    navigate('dashboard');
   });
 
-  const collapseBtn = document.createElement('button');
-  collapseBtn.className = 'sidebar-collapse-btn icon-btn';
-  collapseBtn.innerHTML = `<i data-lucide="panel-left-close"></i>`;
-  collapseBtn.title = 'Toggle Sidebar';
-  collapseBtn.addEventListener('click', () => {
-    collapsed = !collapsed;
-    sidebar.classList.toggle('collapsed', collapsed);
-    collapseBtn.innerHTML = `<i data-lucide="${collapsed ? 'panel-left-open' : 'panel-left-close'}"></i>`;
-    localStorage.setItem('forge-sidebar-collapsed', collapsed);
+  const pinBtn = document.createElement('button');
+  pinBtn.className = 'sidebar-collapse-btn icon-btn';
+  pinBtn.innerHTML = `<i data-lucide="pin"></i>`;
+  pinBtn.title = 'Pin sidebar open';
+  pinBtn.id = 'sidebar-pin-btn';
+  // Set initial state
+  if (sidebar.classList.contains('pinned')) {
+    pinBtn.innerHTML = `<i data-lucide="pin-off"></i>`;
+    pinBtn.title = 'Unpin sidebar';
+  }
+  pinBtn.addEventListener('click', () => {
+    const isPinned = sidebar.classList.toggle('pinned');
+    pinBtn.innerHTML = `<i data-lucide="${isPinned ? 'pin-off' : 'pin'}"></i>`;
+    pinBtn.title = isPinned ? 'Unpin sidebar' : 'Pin sidebar open';
+    localStorage.setItem('forge-sidebar-pinned', isPinned);
     refreshIcons();
   });
 
   header.appendChild(logoWrapper);
-  header.appendChild(collapseBtn);
+  header.appendChild(pinBtn);
 
   // Nav
   const nav = document.createElement('nav');
@@ -104,10 +116,13 @@ export async function renderSidebar() {
   nav.appendChild(buildStaticNavItem({ route: 'dashboard', icon: 'home', label: styleConf.terms.dashboardTitle }));
   nav.appendChild(buildStaticNavItem({ route: 'story-timeline', icon: 'map', label: styleConf.terms.roadmap }));
   nav.appendChild(buildStaticNavItem({ route: 'graph', icon: 'network', label: styleConf.terms.fate }));
-  nav.appendChild(buildStaticNavItem({ route: 'inbox', icon: 'inbox', label: 'Inbox' }));
+  if (styleId === 'story') {
+    nav.appendChild(buildStaticNavItem({ route: 'writer-analytics', icon: 'bar-chart-2', label: 'Story Analytics' }));
+  }
   const continuityEnabled = localStorage.getItem('forge-continuity-enabled') !== 'false';
   if (continuityEnabled) {
-    nav.appendChild(buildStaticNavItem({ route: 'continuity', icon: 'alert-triangle', label: 'Continuity' }));
+    const continuityLabel = styleId === 'story' ? 'Plot Hole Inspector' : 'Continuity';
+    nav.appendChild(buildStaticNavItem({ route: 'continuity', icon: 'alert-triangle', label: continuityLabel }));
   }
 
   // Dynamic list container (databases + canvases sections added by refreshSidebarLists)
@@ -143,26 +158,7 @@ export async function renderSidebar() {
   });
   footer.appendChild(aiItem);
 
-  // Scene Mode toggle item
-  const sceneModeItem = document.createElement('a');
-  sceneModeItem.className = 'nav-item sidebar-scene-mode-btn';
-  sceneModeItem.style.cursor = 'pointer';
-  sceneModeItem.style.color = 'var(--accent-purple, #a78bfa)';
-  sceneModeItem.style.display = 'flex';
-  sceneModeItem.style.alignItems = 'center';
-  sceneModeItem.style.gap = 'var(--sp-3)';
-  sceneModeItem.style.padding = 'var(--sp-2.5) var(--sp-4)';
-  sceneModeItem.style.textDecoration = 'none';
-  sceneModeItem.innerHTML = `
-    <span class="nav-item-icon" style="color: var(--accent-purple, #a78bfa); filter: drop-shadow(0 0 3px rgba(167,139,250,0.25)); display: flex; align-items: center;"><i data-lucide="film"></i></span>
-    <span class="nav-item-label" style="color: var(--accent-purple, #a78bfa); font-weight: 600;">Scene Mode</span>
-  `;
-  sceneModeItem.title = 'Ignis Scene Mode — Co-write scenes';
-  sceneModeItem.addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleSceneMode();
-  });
-  footer.appendChild(sceneModeItem);
+
 
   // Inject continuity pulse animation if not already present
   if (!document.getElementById('continuity-pulse-style')) {
@@ -266,10 +262,22 @@ function buildStaticNavItem(item) {
   link.dataset.route = item.route;
   link.href = `#/${item.route}`;
   
+  const iconColors = {
+    'dashboard': 'var(--accent-amber, #f59e0b)',
+    'story-timeline': '#a78bfa',
+    'graph': '#2dd4bf',
+    'writer-analytics': '#4ade80',
+    'inbox': '#60a5fa',
+    'continuity': '#f87171',
+    'settings': '#94a3b8'
+  };
+  const color = iconColors[item.route] || 'var(--text-secondary)';
+  const iconHtml = `<span class="nav-item-icon" style="color: ${color}; filter: drop-shadow(0 0 4px ${color}25); display: flex; align-items: center;"><i data-lucide="${item.icon}"></i></span>`;
+  
   if (item.route === 'continuity') {
     link.id = 'sidebar-continuity-item';
     link.innerHTML = `
-      <span class="nav-item-icon"><i data-lucide="${item.icon}"></i></span>
+      ${iconHtml}
       <span class="nav-item-label" style="flex: 1;">${item.label}</span>
       <span id="continuity-issue-badge" style="
         background: var(--accent-red, #f43f5e);
@@ -285,7 +293,7 @@ function buildStaticNavItem(item) {
     `;
   } else {
     link.innerHTML = `
-      <span class="nav-item-icon"><i data-lucide="${item.icon}"></i></span>
+      ${iconHtml}
       <span class="nav-item-label">${item.label}</span>
     `;
   }
@@ -323,9 +331,23 @@ export async function refreshSidebarLists() {
       if (deletedSchemas.includes(defSchema.id)) {
         continue;
       }
-      if (!schemas.some(s => s.id === defSchema.id)) {
+      const existing = schemas.find(s => s.id === defSchema.id);
+      if (!existing) {
         await db.saveSchema(defSchema);
         schemas.push(defSchema);
+      } else {
+        // Upgrade check: append missing fields to existing schema
+        let changed = false;
+        if (!existing.fields) existing.fields = [];
+        for (const f of defSchema.fields) {
+          if (!existing.fields.some(ef => ef.id === f.id || ef.name === f.name)) {
+            existing.fields.push(f);
+            changed = true;
+          }
+        }
+        if (changed) {
+          await db.saveSchema(existing);
+        }
       }
     }
   }
@@ -401,8 +423,15 @@ async function buildSchemaItem(schema) {
   toggleBtn.innerHTML = '▸';
   toggleBtn.style.cssText = 'background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:10px; margin-right:6px; padding:2px; transition:transform 0.15s; display:flex; align-items:center; justify-content:center; width:14px; height:14px;';
   
+  const colors = ['#f59e0b', '#38bdf8', '#fb7185', '#a78bfa', '#34d399', '#2dd4bf'];
+  let sum = 0;
+  for (let c = 0; c < schema.id.length; c++) sum += schema.id.charCodeAt(c);
+  const schemaColor = colors[sum % colors.length];
+
   const icon = document.createElement('span');
   icon.className = 'nav-item-icon';
+  icon.style.color = schemaColor;
+  icon.style.filter = `drop-shadow(0 0 4px ${schemaColor}25)`;
   icon.innerHTML = `<i data-lucide="${iconName}"></i>`;
 
   const label = document.createElement('span');
@@ -499,6 +528,8 @@ function buildTabItem(tab) {
 
   const icon = document.createElement('span');
   icon.className = 'nav-item-icon';
+  icon.style.color = '#818cf8'; // Indigo for canvases
+  icon.style.filter = 'drop-shadow(0 0 4px rgba(129, 140, 248, 0.25))';
   icon.innerHTML = `<i data-lucide="${iconName}"></i>`;
 
   const label = document.createElement('span');
