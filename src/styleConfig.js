@@ -480,7 +480,7 @@ export const STYLES = {
       sidebarTitle: 'Campaign Ledger',
       roadmap: 'Campaign Map',
       fate: 'Fate Web',
-      characters: 'NPC Codex',
+      characters: 'Character Codex',
       locations: 'Regions & Dungeons',
       items: 'Loot & Artifacts',
       pagesLabel: 'Campaign Codex',
@@ -507,15 +507,19 @@ export const STYLES = {
       {
         id: 'dnd-npcs-schema',
         projectId,
-        name: 'NPC Codex',
+        name: 'Character Codex',
         icon: 'users',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         fields: [
-          { id: 'f1', name: 'Alignment', type: 'select', options: ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'True Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'] },
-          { id: 'f2', name: 'Affiliation', type: 'text' },
-          { id: 'f3', name: 'Condition', type: 'select', options: ['Healthy', 'Dead/Exiled', 'Captured', 'Transformed'] },
-          { id: 'f4', name: 'Challenge Rating (CR)', type: 'select', options: ['1/8', '1/4', '1/2', '1', '2', '3', '4', '5', '8', '10', '12', '15', '20+'] }
+          { id: 'f1', name: 'Role', type: 'select', options: ['Protagonist', 'Antagonist', 'Deuteragonist', 'Mentor', 'Supporting NPC', 'Villain', 'Ally'] },
+          { id: 'f2', name: 'Species/Race', type: 'text' },
+          { id: 'f3', name: 'Class', type: 'text' },
+          { id: 'f4', name: 'Status', type: 'select', options: ['Alive', 'Deceased', 'Missing', 'Exiled', 'Captured', 'Transformed'] },
+          { id: 'f5', name: 'Alignment', type: 'select', options: ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'True Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'] },
+          { id: 'f6', name: 'Affiliation/Faction', type: 'text' },
+          { id: 'f7', name: 'Challenge Rating (CR)', type: 'select', options: ['1/8', '1/4', '1/2', '1', '2', '3', '4', '5', '8', '10', '12', '15', '20+'] },
+          { id: 'f8', name: 'Tags', type: 'tags' }
         ]
       },
       {

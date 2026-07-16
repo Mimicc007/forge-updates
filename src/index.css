@@ -827,16 +827,33 @@ body.typewriter-mode .ql-editor h3:not(.ql-active) {
   border-radius: var(--radius-xl);
   overflow: hidden;
   cursor: pointer;
-  transition: all 180ms var(--easing-out-expo);
+  transition: transform 240ms var(--easing-out-expo), box-shadow 240ms var(--easing-out-expo), border-color 240ms ease;
   text-decoration: none;
   display: flex;
   flex-direction: column;
   animation: slideUpFade 200ms var(--easing-out-expo) both;
+  position: relative;
+}
+.gallery-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 240ms ease;
+  pointer-events: none;
+  border-radius: inherit;
 }
 .gallery-card:hover {
-  border-color: var(--border-strong);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  border-color: var(--accent-primary);
+  transform: translateY(-6px) scale(1.012);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.45), 0 0 0 1px var(--accent-primary-dim), 0 4px 12px var(--accent-primary-glow);
+}
+.gallery-card:hover::after {
+  opacity: 1;
+}
+.gallery-card:hover .gallery-card-cover {
+  transform: scale(1.06);
 }
 .gallery-card-cover {
   width: 100%;
@@ -849,6 +866,8 @@ body.typewriter-mode .ql-editor h3:not(.ql-active) {
   color: var(--text-muted);
   font-size: 2rem;
   flex-shrink: 0;
+  transition: transform 300ms var(--easing-out-expo);
+  transform-origin: center center;
 }
 .gallery-card-body {
   padding: var(--sp-3) var(--sp-4);

@@ -228,6 +228,8 @@ async function renderTabContent(panel, project) {
           panel.querySelectorAll('.theme-select-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           const chosenTheme = btn.dataset.theme;
+          // Save to both localStorage (read on boot) and db (project-level persistence)
+          localStorage.setItem('forge-theme', chosenTheme);
           await db.saveProjectSetting('forge-theme', chosenTheme);
           
           // Apply globally to HTML element
