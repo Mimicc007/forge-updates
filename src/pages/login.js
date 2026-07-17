@@ -54,9 +54,9 @@ export async function renderLogin(container) {
 
           <div class="lp-divider"><span id="lp-divider-text">or sign in with email</span></div>
 
-          <input id="lp-username" type="text" class="lp-input" placeholder="Choose a Username" style="display: none;" />
-          <input id="lp-email" type="email" class="lp-input" placeholder="Email address" autocomplete="email"/>
-          <input id="lp-password" type="password" class="lp-input" placeholder="Password" autocomplete="current-password"/>
+          <input id="lp-username" type="text" class="lp-input" placeholder="Choose a Username" style="display: none;" autocorrect="off" autocapitalize="none" spellcheck="false" />
+          <input id="lp-email" type="email" class="lp-input" placeholder="Email address" autocomplete="email" autocorrect="off" autocapitalize="none" spellcheck="false" />
+          <input id="lp-password" type="password" class="lp-input" placeholder="Password" autocomplete="current-password" autocorrect="off" autocapitalize="none" spellcheck="false" />
           <button id="lp-submit" class="lp-submit-btn">Sign In</button>
           <button id="lp-toggle" class="lp-link-btn">Don't have an account? Sign up</button>
           <div id="lp-error" class="lp-error" style="display:none"></div>

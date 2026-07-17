@@ -68,9 +68,7 @@ export function initUndoKeyboard(getActivePage, savePageFn) {
     // Only trigger when NOT in an input/textarea/select
     const tag = document.activeElement?.tagName?.toLowerCase();
     const isEditable = document.activeElement?.isContentEditable;
-    if (tag === 'textarea' || tag === 'select' || isEditable) return;
-    // Let Quill handle undo natively inside editor
-    if (tag === 'input' && document.activeElement?.closest('.ql-editor')) return;
+    if (tag === 'input' || tag === 'textarea' || tag === 'select' || isEditable) return;
 
     const isUndo = (e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey;
     const isRedo = (e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey));
