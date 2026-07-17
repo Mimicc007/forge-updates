@@ -10,6 +10,7 @@ import { refreshIcons, applyCustomAccent } from '../main.js';
 import { renderSidebar } from '../sidebar.js';
 import { askGemini, getProjectContext, parseMarkdown, executeForgeAction } from '../ai.js';
 import { getStyleConfig } from '../styleConfig.js';
+import { isLoggedIn, getUserEmail, getUserDisplayName, signOutUser, isFirebaseConfigured } from '../auth.js';
 
 let activeTab = 'project';
 
@@ -312,22 +313,62 @@ async function renderTabContent(panel, project) {
             <button class="btn btn-secondary" id="close-project-btn" style="border-color: var(--accent-red); color: var(--accent-red); background: transparent;"><i data-lucide="log-out" style="width:14px;height:14px;margin-right:6px;"></i> Close Project & Return to Hub</button>
           </div>
 
-          <!-- Cloud storage mockup -->
-          <div style="border-top: 1px solid var(--border-subtle); padding-top: var(--sp-4);">
-            <h4 style="color:#fff; margin: 0 0 4px 0; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
-              Cloud Storage Backup <span style="font-size: 0.7rem; background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 2px 8px; border-radius: 10px;">FUTURE MAJOR UPDATE</span>
-            </h4>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0 0 16px 0; line-height: 1.5;">
-              Sign in with your Forge Cloud account to sync databases and canvases automatically across devices.
-            </p>
-            <div style="display: flex; gap: 12px; max-width: 400px;">
-              <input class="form-input" placeholder="Enter email..." disabled style="background: rgba(255,255,255,0.02); color: var(--text-muted);" />
-              <button class="btn btn-primary" disabled style="opacity: 0.5;">Sign In</button>
-            </div>
+          <!-- Cloud storage and sync options -->
+          <div style="border-top: 1px solid var(--border-subtle); padding-top: var(--sp-4);" id="sync-settings-container">
+            <!-- Rendered below dynamically based on auth state -->
           </div>
 
         </div>
       `;
+
+      // Render Auth / Sync module
+      const syncContainer = panel.querySelector('#sync-settings-container');
+      if (isFirebaseConfigured()) {
+        if (isLoggedIn()) {
+          syncContainer.innerHTML = `
+            <h4 style="color:#fff; margin: 0 0 4px 0; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+              Cloud Sync Connected <span style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 8px; border-radius: 10px;">ACTIVE</span>
+            </h4>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0 0 16px 0; line-height: 1.5;">
+              Signed in as <strong style="color:var(--text-primary)">${escapeHtml(getUserDisplayName())}</strong> (${escapeHtml(getUserEmail())}). Your data is syncing across your devices in real-time.
+            </p>
+            <button class="btn btn-secondary" id="signout-btn" style="border-color: var(--border-default); color: var(--text-secondary); background: transparent;"><i data-lucide="user-minus" style="width:14px;height:14px;margin-right:6px;"></i> Sign Out Account</button>
+          `;
+          syncContainer.querySelector('#signout-btn').addEventListener('click', async () => {
+            if (confirm('Are you sure you want to sign out of your Forge Cloud account? Local data will persist but cloud syncing will pause.')) {
+              await signOutUser();
+              showToast('Signed out successfully.', 'info');
+              navigate('login');
+            }
+          });
+        } else {
+          syncContainer.innerHTML = `
+            <h4 style="color:#fff; margin: 0 0 4px 0; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+              Cloud Sync
+            </h4>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0 0 16px 0; line-height: 1.5;">
+              Sign in to sync your databases and canvases automatically across devices.
+            </p>
+            <button class="btn btn-primary" id="signin-redirect-btn">Sign In to Forge Cloud</button>
+          `;
+          syncContainer.querySelector('#signin-redirect-btn').addEventListener('click', () => {
+            navigate('login');
+          });
+        }
+      } else {
+        syncContainer.innerHTML = `
+          <h4 style="color:#fff; margin: 0 0 4px 0; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+            Cloud Sync <span style="font-size: 0.7rem; background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 2px 8px; border-radius: 10px;">SETUP NEEDED</span>
+          </h4>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0 0 16px 0; line-height: 1.5;">
+            Firebase is not configured yet. Complete the one-time project setup on the login page to enable cross-device cloud sync.
+          </p>
+          <button class="btn btn-secondary" id="goto-setup-btn">Configure Cloud Sync</button>
+        `;
+        syncContainer.querySelector('#goto-setup-btn').addEventListener('click', () => {
+          navigate('login');
+        });
+      }
 
       panel.querySelector('#close-project-btn').addEventListener('click', async () => {
         if (confirm('Are you sure you want to close this project and return to the main selector Hub? All changes will be saved to your file.')) {
