@@ -65,7 +65,7 @@ export const undoManager = new UndoManager();
 // Keyboard binding helper (call once during app init)
 export function initUndoKeyboard(getActivePage, savePageFn) {
   document.addEventListener('keydown', async (e) => {
-    // Only trigger when NOT in an input/textarea/select
+    if (e.isComposing || e.keyCode === 229) return; // ignore Android IME composition
     const tag = document.activeElement?.tagName?.toLowerCase();
     const isEditable = document.activeElement?.isContentEditable;
     if (tag === 'input' || tag === 'textarea' || tag === 'select' || isEditable) return;

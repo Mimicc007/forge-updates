@@ -1,17 +1,15 @@
 /* ============================================================
    Forge — Login / Signup Page
-   Premium auth screen with Google sign-in and email/password.
-   Also handles first-time Firebase config setup.
+   Clean rewrite — fixes broken HTML structure from previous edits.
+   Google sign-in shown on desktop only (Capacitor blocks it).
    ============================================================ */
 
 import {
-  initFirebase, isFirebaseConfigured, signInWithGoogle,
-  signInWithEmail, signUpWithEmail, waitForAuthReady, saveFirebaseConfig
+  isFirebaseConfigured, signInWithGoogle,
+  signInWithEmail, signUpWithEmail, waitForAuthReady, saveFirebaseConfig, initFirebase
 } from '../auth.js';
 import { navigate } from '../router.js';
 import { isCapacitor } from '../platform.js';
-
-
 
 export async function renderLogin(container) {
   container.innerHTML = '';
@@ -25,9 +23,12 @@ export async function renderLogin(container) {
   const user = await waitForAuthReady();
   if (user) { navigate('hub'); return; }
 
+  const showGoogle = !isCapacitor;
+
   container.innerHTML = `
     <div class="lp-page">
       <div class="lp-card">
+
         <div class="lp-logo">
           <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="56" height="56">
             <defs>
@@ -42,8 +43,10 @@ export async function renderLogin(container) {
           </svg>
           <div class="lp-wordmark">FORGE</div>
           <div class="lp-tagline">Your creative universe, everywhere</div>
+        </div>
+
         <div class="lp-methods">
-          ${!isCapacitor ? `
+          ${showGoogle ? `
             <button id="lp-google" class="lp-google-btn">
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -53,12 +56,18 @@ export async function renderLogin(container) {
               </svg>
               Continue with Google
             </button>
-            <div class="lp-divider"><span id="lp-divider-text">or sign in with email</span></div>
-          ` : `
-            <div class="lp-divider" style="margin-top:0"><span id="lp-divider-text">sign in with email</span></div>
-          `}         <input id="lp-username" type="text" class="lp-input" placeholder="Choose a Username" style="display: none;" autocorrect="off" autocapitalize="none" spellcheck="false" />
-          <input id="lp-email" type="email" class="lp-input" placeholder="Email address" autocomplete="email" autocorrect="off" autocapitalize="none" spellcheck="false" />
-          <input id="lp-password" type="password" class="lp-input" placeholder="Password" autocomplete="current-password" autocorrect="off" autocapitalize="none" spellcheck="false" />
+            <div class="lp-divider"><span>or continue with email</span></div>
+          ` : ''}
+
+          <input id="lp-username" type="text" class="lp-input"
+            placeholder="Choose a username" style="display:none"
+            autocorrect="off" autocapitalize="none" spellcheck="false" inputmode="text" />
+          <input id="lp-email" type="email" class="lp-input"
+            placeholder="Email address" autocomplete="email"
+            autocorrect="off" autocapitalize="none" spellcheck="false" inputmode="email" />
+          <input id="lp-password" type="password" class="lp-input"
+            placeholder="Password" autocomplete="current-password"
+            autocorrect="off" autocapitalize="none" spellcheck="false" inputmode="text" />
           <button id="lp-submit" class="lp-submit-btn">Sign In</button>
           <button id="lp-toggle" class="lp-link-btn">Don't have an account? Sign up</button>
           <div id="lp-error" class="lp-error" style="display:none"></div>
@@ -69,7 +78,7 @@ export async function renderLogin(container) {
     </div>
   `;
 
-  _wire();
+  _wire(showGoogle);
 }
 
 function _renderSetup(container) {
@@ -83,14 +92,13 @@ function _renderSetup(container) {
             <path d="M22 18 H42 V24 H30 V30 H38 V36 H30 V46 H22 Z" fill="#ffffff"/>
           </svg>
           <div class="lp-wordmark">FORGE</div>
-          <div class="lp-tagline">Connect Firebase to enable sync & login</div>
+          <div class="lp-tagline">Connect Firebase to enable sync &amp; login</div>
         </div>
         <p style="color:var(--text-secondary);font-size:0.875rem;text-align:center;line-height:1.65;margin-bottom:20px">
           Paste your <strong style="color:var(--text-primary)">Firebase project config</strong> below.
-          This is a one-time setup — users will never need to do this themselves.
         </p>
         <textarea id="lp-firebase-input" class="lp-input" rows="9"
-          placeholder='{&#10;  "apiKey": "AIza...",&#10;  "authDomain": "your-app.firebaseapp.com",&#10;  "projectId": "your-app",&#10;  "storageBucket": "your-app.appspot.com",&#10;  "messagingSenderId": "123456",&#10;  "appId": "1:123456:web:abc"&#10;}'
+          placeholder='{\n  "apiKey": "AIza...",\n  "projectId": "your-app"\n}'
           style="font-family:monospace;font-size:0.78rem;resize:vertical;line-height:1.5"></textarea>
         <button id="lp-firebase-save" class="lp-submit-btn" style="margin-top:12px">Connect Firebase</button>
         <div id="lp-firebase-error" class="lp-error" style="display:none"></div>
@@ -118,55 +126,66 @@ function _renderSetup(container) {
   });
 }
 
-function _wire() {
+function _wire(showGoogle) {
   let isSignup = false;
 
-  const googleBtn = document.getElementById('lp-google');
-  const submitBtn = document.getElementById('lp-submit');
-  const toggleBtn = document.getElementById('lp-toggle');
-  const errEl    = document.getElementById('lp-error');
+  const googleBtn  = document.getElementById('lp-google');
+  const submitBtn  = document.getElementById('lp-submit');
+  const toggleBtn  = document.getElementById('lp-toggle');
+  const usernameEl = document.getElementById('lp-username');
+  const errEl      = document.getElementById('lp-error');
 
-  googleBtn?.addEventListener('click', async () => {
-    googleBtn.disabled = true;
-    googleBtn.textContent = 'Signing in…';
-    errEl.style.display = 'none';
-    try {
-      await signInWithGoogle();
-      navigate('hub');
-    } catch (err) {
-      errEl.textContent = err.message || 'Google sign-in failed.';
-      errEl.style.display = 'block';
-      googleBtn.disabled = false;
-      googleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Continue with Google`;
-    }
-  });
+  if (showGoogle) {
+    googleBtn?.addEventListener('click', async () => {
+      googleBtn.disabled = true;
+      googleBtn.textContent = 'Signing in…';
+      errEl.style.display = 'none';
+      try {
+        await signInWithGoogle();
+        navigate('hub');
+      } catch (err) {
+        errEl.textContent = err.message || 'Google sign-in failed.';
+        errEl.style.display = 'block';
+        googleBtn.disabled = false;
+        googleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Continue with Google`;
+      }
+    });
+  }
 
   toggleBtn?.addEventListener('click', () => {
     isSignup = !isSignup;
-    submitBtn.textContent = isSignup ? 'Create Account' : 'Sign In';
-    toggleBtn.textContent = isSignup ? 'Already have an account? Sign in' : "Don't have an account? Sign up";
-    document.getElementById('lp-divider-text').textContent = isSignup ? 'or create a new account' : 'or sign in with email';
-    document.getElementById('lp-username').style.display = isSignup ? 'block' : 'none';
+    submitBtn.textContent  = isSignup ? 'Create Account' : 'Sign In';
+    toggleBtn.textContent  = isSignup ? 'Already have an account? Sign in' : "Don't have an account? Sign up";
+    usernameEl.style.display = isSignup ? 'block' : 'none';
     errEl.style.display = 'none';
   });
 
   submitBtn?.addEventListener('click', async () => {
     const email    = document.getElementById('lp-email')?.value.trim();
     const password = document.getElementById('lp-password')?.value;
-    const username = document.getElementById('lp-username')?.value.trim();
-    
+    const username = usernameEl?.value.trim();
+
     if (isSignup && !username) {
       errEl.textContent = 'Please choose a username.';
       errEl.style.display = 'block';
       return;
     }
-    if (!email || !password) { errEl.textContent = 'Enter your email and password.'; errEl.style.display = 'block'; return; }
-    
+    if (!email || !password) {
+      errEl.textContent = 'Enter your email and password.';
+      errEl.style.display = 'block';
+      return;
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = isSignup ? 'Creating account…' : 'Signing in…';
     errEl.style.display = 'none';
+
     try {
-      isSignup ? await signUpWithEmail(email, password, username) : await signInWithEmail(email, password);
+      if (isSignup) {
+        await signUpWithEmail(email, password, username);
+      } else {
+        await signInWithEmail(email, password);
+      }
       navigate('hub');
     } catch (err) {
       const msgs = {
@@ -184,7 +203,9 @@ function _wire() {
     }
   });
 
+  // Enter key submits — use 'input' event check to avoid IME interference
   document.getElementById('lp-password')?.addEventListener('keydown', (e) => {
+    if (e.isComposing || e.keyCode === 229) return; // ignore IME composition
     if (e.key === 'Enter') submitBtn?.click();
   });
 }
@@ -220,7 +241,7 @@ function _injectStyles() {
       flex-direction: column;
       align-items: center;
       gap: 6px;
-      margin-bottom: 36px;
+      margin-bottom: 32px;
     }
     .lp-wordmark {
       font-family: var(--font-heading);
@@ -292,7 +313,7 @@ function _injectStyles() {
     }
     .lp-privacy { margin-top: 28px; font-size: 0.72rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
     @media (max-width: 768px) {
-      .lp-card { padding: 32px 24px; border-radius: 16px; }
+      .lp-card { padding: 36px 24px; border-radius: 16px; }
     }
   `;
   document.head.appendChild(s);

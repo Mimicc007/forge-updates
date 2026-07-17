@@ -40,12 +40,12 @@ export function initTabs() {
 
   // Bind Keyboard Shortcut Ctrl+T for new tab
   document.addEventListener('keydown', (e) => {
+    if (e.isComposing || e.keyCode === 229) return; // ignore Android IME composition
     if ((e.ctrlKey || e.metaKey) && e.key === 't') {
       e.preventDefault();
       openNewTab(DEFAULT_TAB_ROUTE, DEFAULT_TAB_TITLE);
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
-      // Close active tab
       e.preventDefault();
       if (activeTabId) {
         closeTab(activeTabId);
