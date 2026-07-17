@@ -11,6 +11,7 @@ import { showToast, showModal, escapeHtml, showContinuityAlertPopup } from './ui
 import { toggleSceneMode } from './sceneMode.js';
 import { getContinuityIssues, clearContinuityIssues } from './continuityMonitor.js';
 import { getStyleConfig } from './styleConfig.js';
+import { shouldUseMobileNav } from './mobileNav.js';
 
 let schemaListEl = null;
 let currentRefreshId = 0;
@@ -20,6 +21,12 @@ let currentRefreshId = 0;
 export async function renderSidebar() {
   const sidebar = document.getElementById('sidebar');
   const project = await db.getActiveProject();
+
+  // On mobile viewports, the sidebar is replaced by the bottom mobile nav
+  if (shouldUseMobileNav()) {
+    sidebar.style.display = 'none';
+    return;
+  }
 
   if (!project) {
     sidebar.style.display = 'none';

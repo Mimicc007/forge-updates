@@ -6,7 +6,7 @@
 import { createIcons, icons } from 'lucide';
 import './index.css';
 import { renderSidebar } from './sidebar.js';
-import { registerRoute, initRouter, navigate, refreshCurrentRoute } from './router.js';
+import { registerRoute, initRouter, navigate } from './router.js';
 import { searchPages, getActiveProject, resetDatabase, initActiveProject } from './db.js';
 import { initGlobalSearch } from './ui.js';
 // --- Import Pages ---
@@ -19,13 +19,14 @@ import { renderSettings } from './pages/settings.js';
 import { renderProjectHub } from './pages/projectHub.js';
 import { renderStoryTimeline } from './pages/storyTimeline.js';
 import { renderQuickCapture } from './pages/quickCapture.js';
-import { initFirebaseSync } from './sync.js';
 import './tutorial.js'; // Ensure tutorial hooks load
 import { initAiDrawer } from './ai.js';
 import { initSceneMode } from './sceneMode.js';
 import { initContinuityMonitor } from './continuityMonitor.js';
 import { renderContinuityEngine } from './pages/continuityEngine.js';
 import { renderWriterAnalytics } from './pages/writerAnalytics.js';
+import { isMobile, isCapacitor, platform } from './platform.js';
+import { initMobileNav, shouldUseMobileNav } from './mobileNav.js';
 // import './agentation-mount.js'; // Dev-only Agentation annotation toolbar
 
 // Setup routes
@@ -128,6 +129,28 @@ async function init() {
     // Apply theme mode if stored (do this early to avoid flash)
     const theme = localStorage.getItem('forge-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
+
+    // ── Platform Setup ──────────────────────────────────────────────────────
+    // Tag the html element with platform info for CSS targeting
+    document.documentElement.setAttribute('data-platform', platform);
+    if (isMobile || shouldUseMobileNav()) {
+      document.documentElement.setAttribute('data-mobile', 'true');
+      // Hide the desktop title bar on mobile
+      const titleBar = document.getElementById('forge-titlebar');
+      if (titleBar) titleBar.style.display = 'none';
+      // Reset app margin
+      const appEl = document.getElementById('app');
+      if (appEl) appEl.style.marginTop = '0';
+    }
+    // On Capacitor, init StatusBar plugin
+    if (isCapacitor && window.Capacitor) {
+      try {
+        const { StatusBar } = await import('@capacitor/status-bar');
+        await StatusBar.setStyle({ style: 'Dark' });
+        await StatusBar.setBackgroundColor({ color: '#070b14' });
+      } catch (_) { /* StatusBar not available in web fallback */ }
+    }
+    // ────────────────────────────────────────────────────────────────────────
     
     // Apply custom accent color if stored
     const customAccent = localStorage.getItem('forge-custom-accent');
@@ -146,8 +169,11 @@ async function init() {
     // 1. Initialize active project file if stored
     const project = await initActiveProject();
 
-    // 2. Render sidebar (automatically hides if project is null)
+    // 2. Render sidebar (automatically hides if project is null, or on mobile)
     await renderSidebar();
+
+    // 2b. Init mobile bottom navigation (replaces sidebar on ≤768px / native)
+    await initMobileNav();
 
     // 3. Initialize AI drawer
     initAiDrawer();
@@ -188,13 +214,8 @@ async function init() {
     // Init icons
     refreshIcons();
 
-    // Initialize Firebase Sync (non-blocking)
-    initFirebaseSync(
-      (status) => {
-        window.dispatchEvent(new CustomEvent('sync-status-changed', { detail: status }));
-      },
-      () => { refreshCurrentRoute(); }
-    ).catch(err => console.warn('Firebase sync disabled:', err));
+    // Firebase Sync is currently a stub pending the universal DB upgrade — not initialized on boot.
+    // See src/sync.js. Re-enable the initFirebaseSync() call here once that lands.
 
   } catch (err) {
     console.error('Forge init error:', err);
@@ -252,7 +273,7 @@ async function checkUpdatesOnBoot() {
     const list = await resp.json();
     if (!Array.isArray(list)) return;
     const latestUpdate = list[0];
-    let currentVersion = 'v0.2.0-alpha';
+    let currentVersion = 'v0.2.1-alpha';
     if (window.electronAPI && window.electronAPI.getAppVersion) {
       try {
         const v = await window.electronAPI.getAppVersion();

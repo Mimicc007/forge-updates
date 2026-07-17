@@ -409,10 +409,30 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
   }
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
 }
+
+// IPC handler to proxy Anthropic Claude requests and bypass CORS
+ipcMain.handle('fetch-claude', async (event, { payload, apiKey }) => {
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Anthropic API Error (Status ${response.status}): ${errorText}`);
+    }
+    return await response.json();
+  } catch (err) {
+    console.error('Error in fetch-claude handler:', err);
+    throw new Error(err.message);
+  }
+});
 
 app.whenReady().then(() => {
   createWindow();

@@ -11,9 +11,18 @@
     "dev:electron": "concurrently \"npm run dev\" \"cross-env NODE_ENV=development electron .\"",
     "build": "vite build",
     "package": "npm run build && electron-builder --win --publish never",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "mobile:build": "vite build",
+    "mobile:sync": "npx cap sync",
+    "mobile:android": "npx cap open android",
+    "mobile:ios": "npx cap open ios",
+    "mobile:run:android": "npx cap run android",
+    "mobile:run:ios": "npx cap run ios"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/cli": "^6.2.0",
+    "@capacitor/ios": "^6.2.0",
     "agentation": "^3.0.2",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
@@ -26,6 +35,9 @@
     "vite": "^8.0.12"
   },
   "dependencies": {
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/splash-screen": "^6.0.3",
+    "@capacitor/status-bar": "^6.0.2",
     "firebase": "^10.8.0",
     "idb": "^8.0.3",
     "lucide": "^1.17.0",

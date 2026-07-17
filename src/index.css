@@ -1197,7 +1197,7 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
   height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
-  background: linear-gradient(180deg, #070b14 0%, #0a0f1a 40%, #111a2e 70%, #070b14 100%);
+  background: linear-gradient(180deg, var(--bg-deepest) 0%, var(--bg-deep) 40%, var(--bg-base) 70%, var(--bg-deepest) 100%);
   position: relative;
 }
 
@@ -1206,7 +1206,7 @@ button, input, textarea, select, .nav-item, .card, a, .node, .workspace-tab, .si
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--dot-grid-color, rgba(255, 255, 255, 0.06)) 1px, transparent 1px);
   background-size: 18px 18px;
   pointer-events: none;
   z-index: 0;
@@ -3869,12 +3869,14 @@ html[data-theme="obsidian"] {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75), 0 0 20px var(--node-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
   transform: translateY(-3px) scale(1.005) !important;
 }
-/* Dragging a node: suppress hover transform to prevent visual offset during drag */
+/* Dragging a node: lift it visually — static values (no transition) so the drag itself stays smooth/lag-free */
 .canvas-node.dragging,
 .canvas-node.dragging:hover,
 .canvas-node.dragging:focus-within {
-  transform: none !important;
+  transform: scale(1.02) !important;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.85), 0 0 0 1px var(--node-accent-border, rgba(255,255,255,0.1)) !important;
   transition: none !important;
+  cursor: grabbing !important;
 }
 
 /* Canvas node header gradient based on node accent */
@@ -5114,4 +5116,334 @@ html[data-theme="obsidian"] {
   background: rgba(255, 255, 255, 0.06) !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ================================================================
+   FORGE — MOBILE RESPONSIVE STYLES (≤768px)
+   Works on top of the existing design without breaking desktop.
+   Powers iOS and Android via Capacitor WebView.
+   ================================================================ */
+
+@media (max-width: 768px) {
+  /* ── Layout Variables ──────────────────────────────────────────── */
+  :root {
+    --mobile-nav-height: 64px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* ── Hide Desktop-Only Elements ─────────────────────────────────── */
+  #forge-titlebar {
+    display: none !important;
+  }
+
+  #sidebar {
+    display: none !important;
+  }
+
+  #app {
+    margin-top: 0 !important;
+    height: 100dvh !important;
+    height: -webkit-fill-available !important;
+    flex-direction: column !important;
+  }
+
+  /* ── Main Content Area ─────────────────────────────────────────── */
+  #main-content {
+    height: 100dvh !important;
+    height: -webkit-fill-available !important;
+    padding-bottom: calc(var(--mobile-nav-height) + var(--safe-bottom)) !important;
+    padding-top: var(--safe-top) !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #page-container {
+    padding: 12px 16px 24px !important;
+    min-height: 100%;
+  }
+
+  /* ── Typography Scale Down ─────────────────────────────────────── */
+  h1 { font-size: 1.5rem !important; }
+  h2 { font-size: 1.25rem !important; }
+  h3 { font-size: 1.1rem !important; }
+
+  /* ── Page Header (shared across pages) ──────────────────────────── */
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 16px 0 12px !important;
+  }
+  .page-header-actions {
+    width: 100% !important;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .page-header-actions .btn, .page-header-actions button {
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  /* ── Cards & Gallery Grid ──────────────────────────────────────── */
+  .grid-auto, .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* ── Database Entry Cards ──────────────────────────────────────── */
+  .card, .schema-card, .gallery-card {
+    margin-bottom: 0 !important;
+  }
+
+  /* ── Page View (Entry Editor) ──────────────────────────────────── */
+  .page-view-wrapper {
+    padding: 0 !important;
+    padding-right: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+  .props-panel {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: calc(var(--mobile-nav-height) + var(--safe-bottom)) !important;
+    width: 100vw !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-top: 1px solid var(--border-subtle) !important;
+    transform: translateX(100%) !important;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    z-index: 500;
+    overflow-y: auto;
+  }
+  .props-panel.open {
+    transform: translateX(0) !important;
+  }
+  .page-view-wrapper.props-open {
+    padding-right: 0 !important;
+  }
+  .page-title-input {
+    font-size: 1.4rem !important;
+    padding: 12px 0 8px !important;
+  }
+  .page-toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .page-toolbar .btn-sm {
+    padding: 6px 10px;
+  }
+
+  /* ── AI Drawer ─────────────────────────────────────────────────── */
+  #ai-drawer {
+    width: 100vw !important;
+    right: -100vw !important;
+    top: var(--safe-top) !important;
+    bottom: calc(var(--mobile-nav-height) + var(--safe-bottom)) !important;
+    height: auto !important;
+    border-left: none !important;
+    border-top: 1px solid var(--glass-border) !important;
+  }
+  #ai-drawer.open {
+    right: 0 !important;
+  }
+
+  /* ── Scene Mode Drawer ─────────────────────────────────────────── */
+  .scene-mode-drawer {
+    width: 100vw !important;
+    bottom: calc(var(--mobile-nav-height) + var(--safe-bottom)) !important;
+    top: var(--safe-top) !important;
+    height: auto !important;
+    border-left: none !important;
+  }
+
+  /* ── Modals ────────────────────────────────────────────────────── */
+  .modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .modal-content {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-radius: 20px 20px 0 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    max-height: 92dvh !important;
+    overflow-y: auto !important;
+    padding-bottom: calc(16px + var(--safe-bottom)) !important;
+  }
+
+  /* ── Search Overlay ────────────────────────────────────────────── */
+  .search-overlay {
+    top: var(--safe-top) !important;
+    left: 0 !important;
+    right: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    max-width: 100vw !important;
+    width: 100vw !important;
+    border-radius: 0 0 16px 16px !important;
+  }
+  .search-input-wrapper input {
+    font-size: 1rem !important;
+    padding: 14px 16px !important;
+  }
+
+  /* ── Story Timeline ────────────────────────────────────────────── */
+  .timeline-board-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+  .timeline-controls {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* ── Graph View ────────────────────────────────────────────────── */
+  .graph-controls {
+    flex-direction: column !important;
+    gap: 6px !important;
+    bottom: calc(var(--mobile-nav-height) + 80px + var(--safe-bottom)) !important;
+  }
+  .graph-info-panel {
+    width: calc(100% - 32px) !important;
+    max-width: none !important;
+    bottom: calc(var(--mobile-nav-height) + 16px + var(--safe-bottom)) !important;
+    left: 16px !important;
+    right: 16px !important;
+  }
+
+  /* ── Canvas Workspace ──────────────────────────────────────────── */
+  .canvas-toolbar {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 8px !important;
+    gap: 4px !important;
+  }
+  .canvas-toolbar button, .canvas-toolbar .toolbar-btn {
+    min-width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    font-size: 11px;
+  }
+  .canvas-tool-label { display: none !important; }
+
+  /* ── Dashboard ─────────────────────────────────────────────────── */
+  .dashboard-hero {
+    padding: 20px 16px !important;
+  }
+  .activity-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Settings ─────────────────────────────────────────────────── */
+  .settings-layout {
+    flex-direction: column !important;
+  }
+  .settings-sidebar {
+    width: 100% !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+    padding: 8px !important;
+  }
+  .settings-tab-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── Touch Targets ─────────────────────────────────────────────── */
+  button, .btn, .nav-item, .icon-btn, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* ── Form Controls ─────────────────────────────────────────────── */
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents iOS auto-zoom */
+  }
+  .form-input, .form-select {
+    padding: 12px 14px !important;
+    font-size: 16px !important;
+  }
+
+  /* ── Quill Editor ──────────────────────────────────────────────── */
+  .ql-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg-surface);
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ql-toolbar .ql-formats {
+    display: inline-flex !important;
+  }
+  .ql-container {
+    font-size: 17px !important;
+    line-height: 1.7 !important;
+  }
+  .ql-editor {
+    padding: 16px !important;
+    min-height: 50dvh;
+  }
+
+  /* ── Writer Analytics ──────────────────────────────────────────── */
+  .analytics-chart-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Project Hub ───────────────────────────────────────────────── */
+  .project-hub-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .project-hub-hero {
+    padding: 24px 16px !important;
+  }
+
+  /* ── Zen Mode ──────────────────────────────────────────────────── */
+  .zen-mode-container {
+    padding: 16px !important;
+  }
+}
+
+/* ── Tablet (769px–1024px) ──────────────────────────────────────── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  #sidebar {
+    width: var(--sidebar-collapsed-width) !important;
+  }
+  #sidebar:hover, #sidebar.pinned {
+    width: var(--sidebar-width) !important;
+  }
+}
+
+/* ── iOS Safe Area Support ──────────────────────────────────────── */
+@supports (padding-top: env(safe-area-inset-top)) {
+  #mobile-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+    height: calc(64px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ── Prevent pull-to-refresh on mobile ──────────────────────────── */
+html {
+  overscroll-behavior-y: none;
+}
+#main-content {
+  overscroll-behavior-y: contain;
 }

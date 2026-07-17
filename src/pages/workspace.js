@@ -16,39 +16,16 @@ import { playClickSound, playZapSound } from '../audio.js';
 import { normalizeActionName } from '../ai.js';
 import { getStyleConfig } from '../styleConfig.js';
 import { initMapEditor } from '../mapEditor.js';
+import { CARD_COLORS, defaultNodeTypes, getDefaultContent } from './workspaceConstants.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const SNAP_GRID = 16;
 const SAVE_DEBOUNCE = 600;
 
-const CARD_COLORS = [
-  { name: 'Default', hex: '' },
-  { name: 'Red', hex: '#f43f5e' },
-  { name: 'Blue', hex: '#3b82f6' },
-  { name: 'Green', hex: '#10b981' },
-  { name: 'Purple', hex: '#8b5cf6' },
-  { name: 'Orange', hex: '#f97316' },
-  { name: 'Yellow', hex: '#eab308' },
-  { name: 'Slate', hex: '#64748b' }
-];
-
 function getActiveNodeTypes(styleId) {
   const cfg = getStyleConfig(styleId || 'story');
-  return cfg.getNodeTypes ? cfg.getNodeTypes() : _defaultNodeTypes();
-}
-
-function _defaultNodeTypes() {
-  return [
-    { type: 'richtext',    label: 'Rich Text',        icon: '📝', color: '#c084fc', defaultW: 380, defaultH: 260 },
-    { type: 'image',       label: 'Image',             icon: '🖼️', color: '#38bdf8', defaultW: 320, defaultH: 280 },
-    { type: 'timeline',   label: 'Timeline Event',     icon: '🕒', color: '#34d399', defaultW: 360, defaultH: 220 },
-    { type: 'link',        label: 'Relationship Link',  icon: '🔗', color: '#fb923c', defaultW: 280, defaultH: 180 },
-    { type: 'moodboard',  label: 'Mood Board',          icon: '🎨', color: '#a78bfa', defaultW: 420, defaultH: 340 },
-    { type: 'quote',       label: 'Quote',              icon: '💬', color: '#06b6d4', defaultW: 320, defaultH: 180 },
-    { type: 'pagelink',    label: 'Database Page',     icon: '📄', color: '#14b8a6', defaultW: 340, defaultH: 220 },
-    { type: 'statblock',   label: 'Character Codex',   icon: '👤', color: '#e5a93b', defaultW: 300, defaultH: 320 }
-  ];
+  return cfg.getNodeTypes ? cfg.getNodeTypes() : defaultNodeTypes();
 }
 
 function getNodeTypeConfig(type) {
@@ -259,6 +236,7 @@ export async function renderWorkspace(container, params) {
   // Interactions
   setupCanvasPan(viewport, surface);
   setupCanvasZoom(viewport);
+  setupCanvasTouchEvents(viewport);  // Touch/pinch support for iOS & Android
   setupDragAndDrop(viewport);
   updateMinimap();
 
@@ -1503,6 +1481,79 @@ function setupCanvasZoom(viewport) {
   }, { passive: false });
 }
 
+/**
+ * Touch events for mobile canvas — pinch-to-zoom + single-finger pan.
+ * Works alongside the existing mouse events.
+ */
+function setupCanvasTouchEvents(viewport) {
+  let lastTouchDist = null;    // for pinch zoom
+  let panTouchId = null;       // track which touch finger is panning
+  let panStartX = 0, panStartY = 0;
+  let panStartCanvasX = 0, panStartCanvasY = 0;
+  let isPanningTouch = false;
+
+  function getTouchById(touches, id) {
+    for (let i = 0; i < touches.length; i++) {
+      if (touches[i].identifier === id) return touches[i];
+    }
+    return null;
+  }
+
+  function getTouchDist(t1, t2) {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  viewport.addEventListener('touchstart', (e) => {
+    if (e.target.closest('.canvas-node')) return; // let node handle its own touch
+    if (e.touches.length === 1) {
+      // Single finger: begin pan
+      const t = e.touches[0];
+      panTouchId = t.identifier;
+      panStartX = t.clientX;
+      panStartY = t.clientY;
+      panStartCanvasX = canvasState.pan.x;
+      panStartCanvasY = canvasState.pan.y;
+      isPanningTouch = true;
+    } else if (e.touches.length === 2) {
+      // Two fingers: begin pinch zoom
+      isPanningTouch = false;
+      lastTouchDist = getTouchDist(e.touches[0], e.touches[1]);
+    }
+  }, { passive: true });
+
+  viewport.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1 && isPanningTouch) {
+      const t = getTouchById(e.touches, panTouchId);
+      if (!t) return;
+      const dx = t.clientX - panStartX;
+      const dy = t.clientY - panStartY;
+      canvasState.pan.x = panStartCanvasX + dx;
+      canvasState.pan.y = panStartCanvasY + dy;
+      applySurfaceTransform();
+      e.preventDefault();
+    } else if (e.touches.length === 2 && lastTouchDist !== null) {
+      // Pinch zoom
+      const newDist = getTouchDist(e.touches[0], e.touches[1]);
+      const scale = newDist / lastTouchDist;
+      const newZoom = Math.max(0.1, Math.min(4, canvasState.zoom * scale));
+      canvasState.zoom = newZoom;
+      lastTouchDist = newDist;
+      applySurfaceTransform();
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  viewport.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) lastTouchDist = null;
+    if (e.touches.length === 0) {
+      isPanningTouch = false;
+      panTouchId = null;
+    }
+  }, { passive: true });
+}
+
 function setupDragAndDrop(viewport) {
   // Convert drop event client coords to canvas coords
   function dropToCanvasCoords(e) {
@@ -1926,24 +1977,6 @@ function snapPos(x, y) {
   };
 }
 
-function getDefaultContent(type) {
-  switch (type) {
-    case 'statblock': return { fields: [{ key: 'Name', value: '' }, { key: 'Age', value: '' }, { key: 'Faction', value: '' }, { key: 'Status', value: '' }] };
-    case 'ability': return { name: '', input: '', abilityType: 'Melee', description: '', notes: '' };
-    case 'timeline': return { era: '', title: '', description: '' };
-    case 'link': return { targetTabId: '', label: '', note: '' };
-    case 'moodboard': return { images: [] };
-    case 'quote': return { speaker: '', text: '' };
-    case 'richtext': return { delta: '' };
-    case 'image': return { src: null, caption: '' };
-    case 'beatsheet': return { template: 'threeact', beats: [] };
-    case 'pagelink': return { pageId: '', title: '', schemaName: '', snippet: '' };
-    case 'setup': return { setupType: 'Plant', description: '', payoffNodeId: '' };
-    case 'payoff': return { payoffType: 'Resolution', resolution: '' };
-    default: return {};
-  }
-}
-
 // ─── Node Mounting ──────────────────────────────────────────────────────────
 
 function mountNode(nodeData) {
@@ -2298,6 +2331,49 @@ function bringToFront(entry) {
 }
 
 // Connection Drawing & Toggling
+let linkPreviewPath = null;
+
+function clientToCanvasPoint(clientX, clientY) {
+  const rect = canvasState.viewport.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left - canvasState.pan.x) / canvasState.zoom,
+    y: (clientY - rect.top - canvasState.pan.y) / canvasState.zoom,
+  };
+}
+
+function updateLinkPreview(e) {
+  if (!canvasState.linkingMode || !canvasState.linkingSourceId || !canvasState.connectionsSvg) return;
+  const sourceNode = canvasState.nodes.find(n => n.data.id === canvasState.linkingSourceId);
+  if (!sourceNode) return;
+
+  const nt = getNodeTypeConfig(sourceNode.data.type);
+  const srcW = sourceNode.data.width || (nt ? nt.defaultW : 300);
+  const srcH = sourceNode.data.height || (nt ? nt.defaultH : 200);
+  const x1 = sourceNode.data.x + srcW / 2;
+  const y1 = sourceNode.data.y + srcH / 2;
+  const target = clientToCanvasPoint(e.clientX, e.clientY);
+
+  // Recreate if missing OR if drawConnections() wiped the SVG out from under us
+  if (!linkPreviewPath || !linkPreviewPath.isConnected) {
+    linkPreviewPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    linkPreviewPath.setAttribute('stroke', 'var(--accent-primary)');
+    linkPreviewPath.setAttribute('stroke-width', '2');
+    linkPreviewPath.setAttribute('stroke-dasharray', '6 5');
+    linkPreviewPath.setAttribute('fill', 'none');
+    linkPreviewPath.setAttribute('opacity', '0.65');
+    linkPreviewPath.setAttribute('pointer-events', 'none');
+    canvasState.connectionsSvg.appendChild(linkPreviewPath);
+  }
+  linkPreviewPath.setAttribute('d', `M ${x1} ${y1} L ${target.x} ${target.y}`);
+}
+
+function clearLinkPreview() {
+  if (linkPreviewPath) {
+    linkPreviewPath.remove();
+    linkPreviewPath = null;
+  }
+}
+
 function toggleConnectionMode() {
   canvasState.linkingMode = !canvasState.linkingMode;
   const btn = document.getElementById('canvas-link-nodes-btn');
@@ -2306,9 +2382,12 @@ function toggleConnectionMode() {
   if (canvasState.linkingMode) {
     canvasState.linkingSourceId = null;
     canvasState.viewport.style.cursor = 'crosshair';
+    canvasState.viewport.addEventListener('mousemove', updateLinkPreview);
     showToast('Click source node to link...', 'info');
   } else {
     canvasState.viewport.style.cursor = '';
+    canvasState.viewport.removeEventListener('mousemove', updateLinkPreview);
+    clearLinkPreview();
     if (canvasState.linkingSourceId) {
       const prevSourceEl = document.querySelector(`[data-node-id="${canvasState.linkingSourceId}"]`);
       if (prevSourceEl) prevSourceEl.style.outline = '';

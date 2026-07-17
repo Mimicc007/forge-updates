@@ -19,5 +19,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   readLocalUpdates: () => ipcRenderer.invoke('read-local-updates'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
-  closeQuickCapture: () => ipcRenderer.send('close-quick-capture')
+  closeQuickCapture: () => ipcRenderer.send('close-quick-capture'),
+  fetchClaude: (payload, apiKey) => ipcRenderer.invoke('fetch-claude', { payload, apiKey })
 });
