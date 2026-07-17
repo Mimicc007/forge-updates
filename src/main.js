@@ -27,8 +27,10 @@ import { renderContinuityEngine } from './pages/continuityEngine.js';
 import { renderWriterAnalytics } from './pages/writerAnalytics.js';
 import { isMobile, isCapacitor, platform } from './platform.js';
 import { initMobileNav, shouldUseMobileNav } from './mobileNav.js';
+import { renderMobileDashboard } from './pages/mobileDashboard.js';
 import { initFirebase, isFirebaseConfigured, waitForAuthReady, onAuthChanged, isLoggedIn } from './auth.js';
 import { renderLogin } from './pages/login.js';
+import './mobile.css';
 // import './agentation-mount.js'; // Dev-only Agentation annotation toolbar
 
 // Setup routes
@@ -224,8 +226,14 @@ async function init() {
     // Check for updates in the background (non-blocking)
     checkUpdatesOnBoot();
 
-    // 5. If no active project, route directly to the Hub selector
-    if (!project) {
+    // 5. On mobile, render mobile dashboard directly — don't fall back to desktop routes
+    if (shouldUseMobileNav()) {
+      const pageContainer = document.getElementById('page-container');
+      if (pageContainer) {
+        await renderMobileDashboard(pageContainer);
+      }
+      // On mobile we always have a project context or hub redirect handled above
+    } else if (!project) {
       navigate('hub');
     }
 

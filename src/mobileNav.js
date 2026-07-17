@@ -8,6 +8,10 @@ import { navigate } from './router.js';
 import { getActiveProject, getSchemas, getAllTabs } from './db.js';
 import { refreshIcons } from './main.js';
 import { getContinuityIssues } from './continuityMonitor.js';
+import { renderMobileDashboard } from './pages/mobileDashboard.js';
+import { renderMobileWrite } from './pages/mobileWrite.js';
+import { renderMobileDatabase } from './pages/mobileDatabase.js';
+import { renderMobileSettings } from './pages/mobileSettings.js';
 
 let navEl = null;
 let moreSheetEl = null;
@@ -208,29 +212,51 @@ async function _render(project) {
 
 // ─── Tab Handlers ─────────────────────────────────────────────────────────────
 
+function _getPageContainer() {
+  return document.getElementById('page-container') || document.body;
+}
+
 async function _onTabClick(tab, project) {
   // Haptic feedback
   if (navigator.vibrate) navigator.vibrate(10);
 
-  if (tab === 'more') { _toggleMoreSheet(); return; }
-  if (tab === 'databases') { await _showDbSheet(project); return; }
-
   _closeAllSheets();
 
+  // Mark active tab immediately for snappy feel
+  navEl.querySelectorAll('.mobile-tab').forEach(b => b.classList.remove('active'));
+  const tabIdMap = { home: 'mnav-home', story: 'mnav-story', databases: 'mnav-data', canvas: 'mnav-canvas', more: 'mnav-more' };
+  document.getElementById(tabIdMap[tab])?.classList.add('active');
+
+  const container = _getPageContainer();
+
   switch (tab) {
-    case 'home':    navigate('dashboard'); break;
-    case 'story':   navigate('story-timeline'); break;
+    case 'home':
+      await renderMobileDashboard(container);
+      break;
+
+    case 'story':
+      await renderMobileWrite(container);
+      break;
+
+    case 'databases':
+      await renderMobileDatabase(container);
+      break;
+
     case 'canvas': {
       try {
         const tabs = await getAllTabs();
         if (tabs && tabs.length > 0) {
           navigate(`workspace/${tabs[0].id}`);
         } else {
-          navigate('dashboard');
+          await renderMobileDashboard(container);
         }
-      } catch (_) { navigate('dashboard'); }
+      } catch (_) { await renderMobileDashboard(container); }
       break;
     }
+
+    case 'more':
+      await renderMobileSettings(container);
+      break;
   }
 }
 
@@ -325,9 +351,11 @@ function _updateActiveTab() {
   const map = {
     'dashboard': 'mnav-home',
     'schema':    'mnav-data',
-    'page':      'mnav-data',
-    'story':     'mnav-story',
+    'page':      'mnav-story',
+    'story-timeline': 'mnav-story',
     'workspace': 'mnav-canvas',
+    'settings':  'mnav-more',
+    'hub':       'mnav-home',
   };
   const id = map[hash] || 'mnav-home';
   document.getElementById(id)?.classList.add('active');
