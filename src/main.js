@@ -27,9 +27,12 @@ import { renderContinuityEngine } from './pages/continuityEngine.js';
 import { renderWriterAnalytics } from './pages/writerAnalytics.js';
 import { isMobile, isCapacitor, platform } from './platform.js';
 import { initMobileNav, shouldUseMobileNav } from './mobileNav.js';
+import { initFirebase, isFirebaseConfigured, waitForAuthReady, onAuthChanged, isLoggedIn } from './auth.js';
+import { renderLogin } from './pages/login.js';
 // import './agentation-mount.js'; // Dev-only Agentation annotation toolbar
 
 // Setup routes
+registerRoute('login', renderLogin);
 registerRoute('dashboard', renderDashboard);
 registerRoute('settings', renderSettings);
 registerRoute('hub', renderProjectHub);
@@ -106,6 +109,23 @@ function showCrashScreen(err) {
 
 async function init() {
   try {
+    // \u2500\u2500 Firebase Auth Gate \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    initFirebase(); // no-op if not configured
+    if (isFirebaseConfigured()) {
+      const user = await waitForAuthReady();
+      if (!user) {
+        // Not logged in \u2014 boot into login screen
+        const theme = localStorage.getItem('forge-theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+        initRouter();
+        navigate('login');
+        return;
+      }
+      // Watch for sign-out during session
+      onAuthChanged((u) => { if (!u) navigate('login'); });
+    }
+    // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
     // Seed default Gemini API settings if not present or if using one of the expired keys
     const currentKey = localStorage.getItem('forge-gemini-key');
     const expiredKeys = [
@@ -125,6 +145,7 @@ async function init() {
     if (!localStorage.getItem('forge-companion-enabled')) {
       localStorage.setItem('forge-companion-enabled', 'true');
     }
+
 
     // Apply theme mode if stored (do this early to avoid flash)
     const theme = localStorage.getItem('forge-theme') || 'dark';
