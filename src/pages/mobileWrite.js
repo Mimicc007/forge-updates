@@ -5,8 +5,7 @@
 
 import { getActiveProject, getPages, getPage, savePage, deletePage, generateId } from '../db.js';
 import { navigate } from '../router.js';
-import { loadQuill } from '../ui.js';
-
+import { createEditor } from '../ui.js';
 let _editorPage = null;
 let _quill = null;
 let _currentPageId = null;
@@ -181,36 +180,14 @@ async function _initQuill(page) {
 
   root.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden';
 
-  // Load Quill (shared npm-bundled module — same version desktop uses, avoids the
-  // Android IME double-character bug present in the older CDN build)
-  const Quill = await loadQuill();
-
-  // Quill container
-  const editorDiv = document.createElement('div');
-  editorDiv.id = 'm-quill-editor';
-  editorDiv.style.cssText = 'flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;font-size:1rem;';
-  root.appendChild(editorDiv);
-
-  _quill = new Quill(editorDiv, {
-    theme: 'snow',
+  // Instantiate the shared, features-rich, IME-shielded editor
+  _quill = await createEditor(root, {
     placeholder: 'Begin writing…',
-    modules: {
-      toolbar: [
-        ['bold', 'italic', 'underline'],
-        [{ header: [1, 2, 3, false] }],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        ['blockquote', 'code-block'],
-        ['clean'],
-      ],
-    },
+    initialContent: page.content || '',
+    minimal: false
   });
 
-  if (page.content) {
-    _quill.root.innerHTML = page.content;
-  }
 
-  // Mobile Quill CSS overrides
-  _injectEditorStyles();
 
   _quill.on('text-change', () => {
     _scheduleSave({ content: _quill.root.innerHTML });
@@ -250,57 +227,7 @@ function _closeEditor() {
   clearTimeout(_saveTimer);
 }
 
-function _injectEditorStyles() {
-  if (document.getElementById('m-editor-styles')) return;
-  const s = document.createElement('style');
-  s.id = 'm-editor-styles';
-  s.textContent = `
-    #m-editor-panel .ql-toolbar.ql-snow {
-      border-left: none;
-      border-right: none;
-      border-top: 1px solid var(--border-default);
-      border-bottom: 1px solid var(--border-default);
-      background: var(--bg-surface);
-      overflow-x: auto;
-      white-space: nowrap;
-      scrollbar-width: none;
-    }
-    #m-editor-panel .ql-toolbar.ql-snow::-webkit-scrollbar { display: none; }
-    #m-editor-panel .ql-container.ql-snow {
-      border: none;
-      font-size: 1rem;
-      line-height: 1.75;
-      flex: 1;
-    }
-    #m-editor-panel .ql-editor {
-      padding: 20px;
-      min-height: 300px;
-      color: var(--text-primary);
-      background: var(--bg-base);
-    }
-    #m-editor-panel .ql-editor.ql-blank::before {
-      color: var(--text-muted);
-    }
-    #m-editor-panel #m-quill-root {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      overflow: hidden;
-    }
-    #m-editor-panel #m-quill-editor {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    #m-editor-panel .ql-container {
-      flex: 1;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-  `;
-  document.head.appendChild(s);
-}
+
 
 function _timeAgo(ts) {
   if (!ts) return 'Never';

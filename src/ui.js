@@ -450,6 +450,7 @@ export async function createEditor(container, { placeholder = 'Start writing...'
 
   // Keyboard navigation
   quill.root.addEventListener('keydown', (e) => {
+    if (e.isComposing || e.keyCode === 229) return; // ignore virtual IME typing composition
     if (dropdown) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();

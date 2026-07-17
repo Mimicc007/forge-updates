@@ -635,17 +635,50 @@
 /* Quill editor inside mobile */
 .m-editor-page .ql-container {
   flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  font-size: 1rem;
-  line-height: 1.7;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: none !important;
 }
 
-.m-editor-page .ql-toolbar {
-  border-top: 1px solid var(--border-default);
-  border-bottom: 1px solid var(--border-default);
-  background: var(--bg-surface);
-  overflow-x: auto;
-  white-space: nowrap;
+.m-editor-page .ql-editor {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 20px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  font-family: var(--font-body) !important;
+  font-size: 1.05rem !important;
+  line-height: 1.7 !important;
+  color: var(--text-primary) !important;
+  background: var(--bg-base) !important;
+}
+
+.m-editor-page .ql-editor.ql-blank::before {
+  left: 20px !important;
+  color: var(--text-muted) !important;
+  font-style: normal !important;
+}
+
+/* Scrollable toolbar directly above keyboard/bottom */
+.m-editor-page .ql-toolbar.ql-snow {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  padding: 8px 12px !important;
+  border: none !important;
+  background: var(--bg-surface) !important;
+  border-top: 1px solid var(--border-default) !important;
+  border-bottom: 1px solid var(--border-default) !important;
+  -webkit-overflow-scrolling: touch !important;
   scrollbar-width: none;
+}
+
+.m-editor-page .ql-toolbar.ql-snow::-webkit-scrollbar {
+  display: none !important;
+}
+
+.m-editor-page .ql-formats {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
 }
