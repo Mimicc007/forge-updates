@@ -21,8 +21,11 @@ export async function renderMobileDashboard(container) {
     const user = getCurrentUser();
     const username = user?.displayName || user?.email?.split('@')[0] || 'Writer';
 
+    const dashEl = container.querySelector('#mobile-dashboard');
+    if (!dashEl) return;
+
     if (!project) {
-      container.querySelector('#mobile-dashboard').innerHTML = `
+      dashEl.innerHTML = `
         <div class="m-empty" style="padding-top:80px">
           <div class="m-empty-icon">📂</div>
           <div class="m-empty-title">No project open</div>
@@ -50,7 +53,10 @@ export async function renderMobileDashboard(container) {
 
     const timeLabel = _timeGreeting();
 
-    container.querySelector('#mobile-dashboard').innerHTML = `
+    const dashElUpdate = container.querySelector('#mobile-dashboard');
+    if (!dashElUpdate) return;
+
+    dashElUpdate.innerHTML = `
       <!-- Hero -->
       <div class="m-hero">
         <div class="m-hero-greeting">${timeLabel}</div>
@@ -128,13 +134,16 @@ export async function renderMobileDashboard(container) {
 
   } catch (err) {
     console.error('[MobileDashboard]', err);
-    container.querySelector('#mobile-dashboard').innerHTML = `
-      <div class="m-empty" style="padding-top:80px">
-        <div class="m-empty-icon">⚠️</div>
-        <div class="m-empty-title">Failed to load</div>
-        <div class="m-empty-sub">${err.message}</div>
-      </div>
-    `;
+    const errDashEl = container.querySelector('#mobile-dashboard');
+    if (errDashEl) {
+      errDashEl.innerHTML = `
+        <div class="m-empty" style="padding-top:80px">
+          <div class="m-empty-icon">⚠️</div>
+          <div class="m-empty-title">Failed to load</div>
+          <div class="m-empty-sub">${err.message}</div>
+        </div>
+      `;
+    }
   }
 }
 

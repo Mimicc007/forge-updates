@@ -251,18 +251,10 @@ async function init() {
 
     // Check for updates in the background (non-blocking)
     checkUpdatesOnBoot();
-
-    // 5. On mobile, render mobile dashboard directly — don't fall back to desktop routes
-    if (shouldUseMobileNav()) {
-      const pageContainer = document.getElementById('page-container');
-      if (pageContainer) {
-        await renderMobileDashboard(pageContainer);
-      }
-      // On mobile we always have a project context or hub redirect handled above
-    } else if (!project) {
+    // 5. If no active project, route directly to the Hub selector (except on mobile)
+    if (!shouldUseMobileNav() && !project) {
       navigate('hub');
     }
-
     // Start background reminder service
     startReminderService();
 
