@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "977760622087",
+    "firebase_url": "https://myforge-app-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "myforge-app",
+    "storage_bucket": "myforge-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:977760622087:android:ab721637b6f31aa9893ca2",
+        "android_client_info": {
+          "package_name": "com.forge.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "977760622087-uivutornf66fk60c33b1fv8s8hm6fv74.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.forge.app",
+            "certificate_hash": "7f0855ad5134fb0ca1af966d995aef92052e1c49"
+          }
+        },
+        {
+          "client_id": "977760622087-6tgvml4ua2rgi0h582a17hbbdkcb372m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2MqzR6zWnExAXtqVvLStiGxLKgL6rle4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "977760622087-6tgvml4ua2rgi0h582a17hbbdkcb372m.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

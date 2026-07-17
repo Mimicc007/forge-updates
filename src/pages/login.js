@@ -1,7 +1,8 @@
 /* ============================================================
    Forge — Login / Signup Page
-   Clean rewrite — fixes broken HTML structure from previous edits.
-   Google sign-in shown on desktop only (Capacitor blocks it).
+   Google sign-in now works on all platforms: web uses the Firebase
+   popup flow, Capacitor (mobile) uses the native Google Sign-In plugin
+   (see signInWithGoogle() in auth.js).
    ============================================================ */
 
 import {
@@ -9,7 +10,6 @@ import {
   signInWithEmail, signUpWithEmail, waitForAuthReady, saveFirebaseConfig, initFirebase
 } from '../auth.js';
 import { navigate } from '../router.js';
-import { isCapacitor } from '../platform.js';
 
 export async function renderLogin(container) {
   container.innerHTML = '';
@@ -23,7 +23,7 @@ export async function renderLogin(container) {
   const user = await waitForAuthReady();
   if (user) { navigate('hub'); return; }
 
-  const showGoogle = !isCapacitor;
+  const showGoogle = true;
 
   container.innerHTML = `
     <div class="lp-page">

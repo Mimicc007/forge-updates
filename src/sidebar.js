@@ -5,7 +5,7 @@
 
 import { navigate } from './router.js';
 import * as db from './db.js';
-import { refreshIcons } from './main.js';
+import { refreshIcons } from './icons.js';
 import { toggleAiDrawer } from './ai.js';
 import { showToast, showModal, escapeHtml, showContinuityAlertPopup } from './ui.js';
 import { toggleSceneMode } from './sceneMode.js';
@@ -111,7 +111,7 @@ export async function renderSidebar() {
   const styleConf = getStyleConfig(styleId);
   const customAccent = localStorage.getItem('forge-custom-accent');
   if (!customAccent) {
-    const { applyCustomAccent } = await import('./main.js');
+    const { applyCustomAccent } = await import('./icons.js');
     applyCustomAccent(styleConf.accent);
   }
 

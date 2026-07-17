@@ -6,7 +6,7 @@
 
 import { getActiveProject, getPages, getSchemas, getAllTabs, getNodesForTab, getAllNodes } from '../db.js';
 import { navigate } from '../router.js';
-import { refreshIcons } from '../main.js';
+import { refreshIcons } from '../icons.js';
 import { showToast, escapeHtml } from '../ui.js';
 
 // Graph state

@@ -6,7 +6,7 @@
 
 import { navigate } from './router.js';
 import { getActiveProject, getSchemas, getAllTabs } from './db.js';
-import { refreshIcons } from './main.js';
+import { refreshIcons } from './icons.js';
 import { getContinuityIssues } from './continuityMonitor.js';
 import { renderMobileDashboard } from './pages/mobileDashboard.js';
 import { renderMobileWrite } from './pages/mobileWrite.js';

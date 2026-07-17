@@ -5,6 +5,7 @@
 
 import { getActiveProject, getPages, getPage, savePage, deletePage, generateId } from '../db.js';
 import { navigate } from '../router.js';
+import { loadQuill } from '../ui.js';
 
 let _editorPage = null;
 let _quill = null;
@@ -174,19 +175,9 @@ async function _initQuill(page) {
 
   root.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden';
 
-  // Load Quill if not already loaded
-  if (!window.Quill) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdn.quilljs.com/1.3.7/quill.snow.css';
-    document.head.appendChild(link);
-    await new Promise((res) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.quilljs.com/1.3.7/quill.min.js';
-      script.onload = res;
-      document.head.appendChild(script);
-    });
-  }
+  // Load Quill (shared npm-bundled module — same version desktop uses, avoids the
+  // Android IME double-character bug present in the older CDN build)
+  const Quill = await loadQuill();
 
   // Quill container
   const editorDiv = document.createElement('div');
@@ -194,7 +185,7 @@ async function _initQuill(page) {
   editorDiv.style.cssText = 'flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;font-size:1rem;';
   root.appendChild(editorDiv);
 
-  _quill = new window.Quill('#m-quill-editor', {
+  _quill = new Quill(editorDiv, {
     theme: 'snow',
     placeholder: 'Begin writing…',
     modules: {

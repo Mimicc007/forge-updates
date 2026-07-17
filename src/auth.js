@@ -8,7 +8,7 @@ import { initializeApp, getApps } from 'firebase/app';
 import {
   getAuth,
   signInWithPopup,
-  signInWithRedirect,
+  signInWithCredential,
   GoogleAuthProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -88,13 +88,25 @@ export function waitForAuthReady() {
 
 export async function signInWithGoogle() {
   if (!_auth) throw new Error('Firebase not initialized');
+  const isMobileNative = typeof window.Capacitor !== 'undefined' && window.Capacitor?.isNativePlatform?.();
+
+  if (isMobileNative) {
+    // Native flow: the plugin drives Android/iOS's own Google Sign-In UI,
+    // then hands us an ID token we bridge into the Firebase JS SDK below
+    // so the rest of the app (which reads _currentUser / onAuthStateChanged)
+    // keeps working exactly the same as on desktop.
+    const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+    const result = await FirebaseAuthentication.signInWithGoogle();
+    const idToken = result?.credential?.idToken;
+    if (!idToken) throw new Error('Google sign-in was cancelled or returned no credential.');
+    const credential = GoogleAuthProvider.credential(idToken);
+    const userCred = await signInWithCredential(_auth, credential);
+    _currentUser = userCred.user;
+    return userCred.user;
+  }
+
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
-  const isMobileNative = typeof window.Capacitor !== 'undefined' && window.Capacitor?.isNativePlatform?.();
-  if (isMobileNative) {
-    await signInWithRedirect(_auth, provider);
-    return null;
-  }
   const result = await signInWithPopup(_auth, provider);
   _currentUser = result.user;
   return result.user;

@@ -207,7 +207,7 @@ export function createImageUploadZone(onFiles) {
 let quillModule = null;
 let quillCssLoaded = false;
 
-async function loadQuill() {
+export async function loadQuill() {
   if (quillModule) return quillModule.default;
 
   if (!quillCssLoaded) {

@@ -2,11 +2,11 @@
    Forge — Main Entry Point
    Initializes the app, router, sidebar, and global search.
    ============================================================ */
-
 import { createIcons, icons } from 'lucide';
 import './index.css';
 import { renderSidebar } from './sidebar.js';
 import { registerRoute, initRouter, navigate } from './router.js';
+import { refreshIcons, applyCustomAccent } from './icons.js';
 import { searchPages, getActiveProject, resetDatabase, initActiveProject } from './db.js';
 import { initGlobalSearch } from './ui.js';
 // --- Import Pages ---
@@ -47,10 +47,7 @@ registerRoute('quick-capture', renderQuickCapture);
 registerRoute('continuity', renderContinuityEngine);
 registerRoute('writer-analytics', renderWriterAnalytics);
 
-// --- Initialize ---
-export function refreshIcons() {
-  createIcons({ icons });
-}
+
 
 function showCrashScreen(err) {
   const isDbError = String(err).includes('UnknownError') || String(err).includes('database') || String(err).includes('IndexedDB') || String(err).includes('quota');
@@ -109,8 +106,36 @@ function showCrashScreen(err) {
   }
 }
 
+// Read back any native crash log left by MainActivity.java's uncaught-exception
+// handler (see that file for why this exists). Shows it via the same crash
+// screen used for JS errors, then deletes the file so it doesn't reappear.
+async function checkForPastNativeCrash() {
+  try {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    const result = await Filesystem.readFile({
+      path: 'last_crash.txt',
+      directory: Directory.Data,
+      encoding: 'utf8',
+    });
+    showCrashScreen('[Previous session crash \u2014 captured on last launch]\n\n' + result.data);
+    await Filesystem.deleteFile({ path: 'last_crash.txt', directory: Directory.Data }).catch(() => {});
+    return true;
+  } catch (e) {
+    // No crash file present \u2014 this is the normal, expected case.
+    return false;
+  }
+}
+
 async function init() {
   try {
+    // Native Crash Log Check: on Android, a past native crash (which happens
+    // below the JS layer and never reaches window.onerror below) may be
+    // waiting from the last launch. Show it now instead of continuing boot.
+    if (isCapacitor) {
+      const shownPastCrash = await checkForPastNativeCrash();
+      if (shownPastCrash) return;
+    }
+
     // \u2500\u2500 Firebase Auth Gate \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     initFirebase(); // no-op if not configured
     if (isFirebaseConfigured()) {
@@ -252,47 +277,7 @@ async function init() {
   }
 }
 
-// Custom Accent Color Application
-export function applyCustomAccent(hex) {
-  let styleEl = document.getElementById('custom-accent-vars');
-  if (!hex) {
-    if (styleEl) styleEl.remove();
-    return;
-  }
-  
-  if (!styleEl) {
-    styleEl = document.createElement('style');
-    styleEl.id = 'custom-accent-vars';
-    document.head.appendChild(styleEl);
-  }
 
-  const cleanHex = hex.replace('#', '');
-  const r = parseInt(cleanHex.substring(0, 2), 16) || 0;
-  const g = parseInt(cleanHex.substring(2, 4), 16) || 0;
-  const b = parseInt(cleanHex.substring(4, 6), 16) || 0;
-
-  const accentDim = `rgba(${r}, ${g}, ${b}, 0.12)`;
-  const accentGlow = `rgba(${r}, ${g}, ${b}, 0.35)`;
-  const accentPrimaryHover = `rgba(${r}, ${g}, ${b}, 0.8)`;
-
-  styleEl.innerHTML = `
-    :root, html {
-      --accent-primary: ${hex} !important;
-      --accent-primary-hover: ${accentPrimaryHover} !important;
-      --accent-primary-dim: ${accentDim} !important;
-      --accent-primary-glow: ${accentGlow} !important;
-      
-      --accent-purple: ${hex} !important;
-      --accent-purple-dim: ${accentDim} !important;
-      --accent-cyan: ${hex} !important;
-      --accent-cyan-dim: ${accentDim} !important;
-    }
-    .sidebar-logo path {
-      fill: ${hex} !important;
-      stroke: ${hex} !important;
-    }
-  `;
-}
 
 // Background Update Checker
 async function checkUpdatesOnBoot() {

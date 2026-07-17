@@ -6,7 +6,7 @@
 import * as db from '../db.js';
 import { navigate } from '../router.js';
 import { showToast, escapeHtml } from '../ui.js';
-import { refreshIcons } from '../main.js';
+import { refreshIcons } from '../icons.js';
 import { renderSidebar } from '../sidebar.js';
 import { getStyleConfig } from '../styleConfig.js';
 

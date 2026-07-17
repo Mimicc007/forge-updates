@@ -7,7 +7,7 @@
 import { getActiveProject, getPages } from './db.js';
 import { askGemini } from './ai.js';
 import { showToast, escapeHtml } from './ui.js';
-import { refreshIcons } from './main.js';
+import { refreshIcons } from './icons.js';
 
 // ─── Module State ─────────────────────────────────────────────────────────────
 let _isOpen = false;

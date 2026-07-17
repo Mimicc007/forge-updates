@@ -4,7 +4,7 @@
    ============================================================ */
 
 import { getPage, savePage, getSchema, deletePage, getBacklinks, getSchemas, getPagesBySchema } from '../db.js';
-import { refreshIcons } from '../main.js';
+import { refreshIcons } from '../icons.js';
 import { navigate } from '../router.js';
 import { showToast, showConfirm, createEditor, timeAgo } from '../ui.js';
 import { initMapEditor } from '../mapEditor.js';

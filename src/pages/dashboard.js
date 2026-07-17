@@ -6,7 +6,7 @@
 import * as db from '../db.js';
 import { navigate } from '../router.js';
 import { timeAgo, escapeHtml, showModal, showToast } from '../ui.js';
-import { refreshIcons } from '../main.js';
+import { refreshIcons } from '../icons.js';
 import { refreshSidebarLists } from '../sidebar.js';
 import { showCreateTabModal } from './workspace.js';
 import { startTutorial } from '../tutorial.js';

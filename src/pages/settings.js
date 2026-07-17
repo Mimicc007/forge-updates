@@ -6,7 +6,7 @@
 import * as db from '../db.js';
 import { navigate } from '../router.js';
 import { showToast, escapeHtml, showModal, checkOllamaRunning, showOllamaInstallPrompt } from '../ui.js';
-import { refreshIcons, applyCustomAccent } from '../main.js';
+import { refreshIcons, applyCustomAccent } from '../icons.js';
 import { renderSidebar } from '../sidebar.js';
 import { askGemini, getProjectContext, parseMarkdown, executeForgeAction } from '../ai.js';
 import { getStyleConfig } from '../styleConfig.js';

@@ -2,10 +2,8 @@
    Forge — AI Companion (Ignis)
    Provides a global sliding partner drawer, context gathering,
    and Gemini API integration.
-   ============================================================ */
-
-import * as db from './db.js';
-import { refreshIcons } from './main.js';
+   ============================================================ */import * as db from './db.js';
+import { refreshIcons } from './icons.js';
 import { showToast, checkOllamaRunning, showOllamaInstallPrompt } from './ui.js';
 import { getStyleConfig } from './styleConfig.js';
 

@@ -4,7 +4,7 @@
    ============================================================ */
 
 import { getSchema, saveSchema, deleteSchema, getPagesBySchema, savePage, deletePage, generateId, getActiveProject, saveProject } from '../db.js';
-import { refreshIcons } from '../main.js';
+import { refreshIcons } from '../icons.js';
 import { navigate } from '../router.js';
 import { showModal, showToast, showConfirm, escapeHtml, timeAgo } from '../ui.js';
 import { refreshSidebarLists } from '../sidebar.js';

@@ -35,7 +35,9 @@
     "vite": "^8.0.12"
   },
   "dependencies": {
+    "@capacitor-firebase/authentication": "^6.3.1",
     "@capacitor/core": "^6.2.0",
+    "@capacitor/filesystem": "^6.0.2",
     "@capacitor/splash-screen": "^6.0.3",
     "@capacitor/status-bar": "^6.0.2",
     "firebase": "^10.14.1",
