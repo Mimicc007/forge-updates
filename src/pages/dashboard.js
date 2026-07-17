@@ -377,29 +377,26 @@ export async function renderDashboard(container) {
     <div class="dash-root">
 
       <!-- Hero -->
-      <div class="dash-hero dot-grid-bg" style="position: relative;">
-        <div class="dash-hero-shimmer" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-4);">
-          <span class="shimmer-badge">
-            <span class="badge-new">New</span>
-            AI Plot Inspector is live
-          </span>
-          
+      <div class="dash-hero dot-grid-bg" style="position: relative; padding-top: 48px;">
+        
+        <!-- Top Right Meta & Status Group -->
+        <div style="position: absolute; top: 24px; right: 40px; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; z-index: 10;">
           ${isLoggedIn() ? `
-            <div style="font-size: 0.8rem; font-family: var(--font-hud); color: var(--text-secondary); display: flex; align-items: center; gap: 8px; background: var(--glass-surface); border: 1px solid var(--border-subtle); padding: 4px 12px; border-radius: var(--radius-full);">
-              <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
-              Welcome back, <strong style="color: var(--text-primary); font-weight: 600;">${escapeHtml(getUserDisplayName())}</strong>
+            <div style="font-size: 0.78rem; font-family: var(--font-hud); color: var(--text-secondary); display: flex; align-items: center; gap: 8px; background: var(--glass-surface); border: 1px solid var(--glass-border); padding: 4px 12px; border-radius: var(--radius-full); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 8px #10b981;"></span>
+              Welcome, <strong style="color: var(--text-primary); font-weight: 600;">${escapeHtml(getUserDisplayName())}</strong>
             </div>
           ` : ''}
-        </div>
-        
-        <!-- Project Health Badge -->
-        <div id="project-health-badge" style="position: absolute; top: 40px; right: 40px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-          <div style="font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);">Universe Integrity</div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="width: 80px; height: 6px; background: rgba(255,255,255,0.06); border-radius: 9999px; overflow: hidden; border: 1px solid rgba(255,255,255,0.04);">
-              <div id="project-health-bar" style="width: 0%; height: 100%; background: var(--accent-green); transition: width 0.8s var(--easing-out-expo);"></div>
+          
+          <!-- Project Health Badge -->
+          <div id="project-health-badge" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+            <div style="font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Universe Integrity</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="width: 70px; height: 5px; background: rgba(255,255,255,0.04); border-radius: 9999px; overflow: hidden; border: 1px solid rgba(255,255,255,0.02);">
+                <div id="project-health-bar" style="width: 0%; height: 100%; background: var(--accent-green); transition: width 0.8s var(--easing-out-expo);"></div>
+              </div>
+              <span id="project-health-value" style="font-family: var(--font-hud); font-size: 10px; font-weight: 700; color: var(--accent-green);">100%</span>
             </div>
-            <span id="project-health-value" style="font-family: var(--font-hud); font-size: var(--fs-xs); font-weight: 700; color: var(--accent-green);">100%</span>
           </div>
         </div>
 
