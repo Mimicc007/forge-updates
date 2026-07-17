@@ -10,6 +10,7 @@ import { refreshIcons } from '../main.js';
 import { refreshSidebarLists } from '../sidebar.js';
 import { showCreateTabModal } from './workspace.js';
 import { startTutorial } from '../tutorial.js';
+import { isLoggedIn, getUserDisplayName } from '../auth.js';
 
 export async function renderDashboard(container) {
   const project = await db.getActiveProject();
@@ -377,11 +378,18 @@ export async function renderDashboard(container) {
 
       <!-- Hero -->
       <div class="dash-hero dot-grid-bg" style="position: relative;">
-        <div class="dash-hero-shimmer">
+        <div class="dash-hero-shimmer" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-4);">
           <span class="shimmer-badge">
             <span class="badge-new">New</span>
             AI Plot Inspector is live
           </span>
+          
+          ${isLoggedIn() ? `
+            <div style="font-size: 0.8rem; font-family: var(--font-hud); color: var(--text-secondary); display: flex; align-items: center; gap: 8px; background: var(--glass-surface); border: 1px solid var(--border-subtle); padding: 4px 12px; border-radius: var(--radius-full);">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+              Welcome back, <strong style="color: var(--text-primary); font-weight: 600;">${escapeHtml(getUserDisplayName())}</strong>
+            </div>
+          ` : ''}
         </div>
         
         <!-- Project Health Badge -->

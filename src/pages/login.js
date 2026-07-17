@@ -52,8 +52,9 @@ export async function renderLogin(container) {
             Continue with Google
           </button>
 
-          <div class="lp-divider"><span>or sign in with email</span></div>
+          <div class="lp-divider"><span id="lp-divider-text">or sign in with email</span></div>
 
+          <input id="lp-username" type="text" class="lp-input" placeholder="Choose a Username" style="display: none;" />
           <input id="lp-email" type="email" class="lp-input" placeholder="Email address" autocomplete="email"/>
           <input id="lp-password" type="password" class="lp-input" placeholder="Password" autocomplete="current-password"/>
           <button id="lp-submit" class="lp-submit-btn">Sign In</button>
@@ -142,18 +143,28 @@ function _wire() {
     isSignup = !isSignup;
     submitBtn.textContent = isSignup ? 'Create Account' : 'Sign In';
     toggleBtn.textContent = isSignup ? 'Already have an account? Sign in' : "Don't have an account? Sign up";
+    document.getElementById('lp-divider-text').textContent = isSignup ? 'or create a new account' : 'or sign in with email';
+    document.getElementById('lp-username').style.display = isSignup ? 'block' : 'none';
     errEl.style.display = 'none';
   });
 
   submitBtn?.addEventListener('click', async () => {
     const email    = document.getElementById('lp-email')?.value.trim();
     const password = document.getElementById('lp-password')?.value;
+    const username = document.getElementById('lp-username')?.value.trim();
+    
+    if (isSignup && !username) {
+      errEl.textContent = 'Please choose a username.';
+      errEl.style.display = 'block';
+      return;
+    }
     if (!email || !password) { errEl.textContent = 'Enter your email and password.'; errEl.style.display = 'block'; return; }
+    
     submitBtn.disabled = true;
     submitBtn.textContent = isSignup ? 'Creating account…' : 'Signing in…';
     errEl.style.display = 'none';
     try {
-      isSignup ? await signUpWithEmail(email, password) : await signInWithEmail(email, password);
+      isSignup ? await signUpWithEmail(email, password, username) : await signInWithEmail(email, password);
       navigate('hub');
     } catch (err) {
       const msgs = {

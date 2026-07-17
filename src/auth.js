@@ -15,7 +15,8 @@ import {
   signOut,
   onAuthStateChanged,
   browserLocalPersistence,
-  setPersistence
+  setPersistence,
+  updateProfile
 } from 'firebase/auth';
 
 // ─── Firebase Config ─────────────────────────────────────────────────────────
@@ -106,9 +107,12 @@ export async function signInWithEmail(email, password) {
   return result.user;
 }
 
-export async function signUpWithEmail(email, password) {
+export async function signUpWithEmail(email, password, username) {
   if (!_auth) throw new Error('Firebase not initialized');
   const result = await createUserWithEmailAndPassword(_auth, email, password);
+  if (username) {
+    await updateProfile(result.user, { displayName: username });
+  }
   _currentUser = result.user;
   return result.user;
 }
