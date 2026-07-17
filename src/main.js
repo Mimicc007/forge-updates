@@ -46,7 +46,8 @@ registerRoute('story-timeline', renderStoryTimeline);
 registerRoute('quick-capture', renderQuickCapture);
 registerRoute('continuity', renderContinuityEngine);
 registerRoute('writer-analytics', renderWriterAnalytics);
-
+registerRoute('write', renderStoryTimeline); // mobile overrides this, desktop maps to story-timeline
+registerRoute('databases', renderDashboard); // mobile overrides this, desktop maps to dashboard
 
 
 function showCrashScreen(err) {

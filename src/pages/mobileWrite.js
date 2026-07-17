@@ -13,7 +13,9 @@ let _currentPageId = null;
 let _saveTimer = null;
 let _project = null;
 
-export async function renderMobileWrite(container) {
+
+
+export async function renderMobileWrite(container, activePageId = null) {
   _project = await getActiveProject();
 
   if (!_project) {
@@ -30,6 +32,10 @@ export async function renderMobileWrite(container) {
   }
 
   await _renderPageList(container);
+  if (activePageId) {
+    const pages = await getPages(_project.id).catch(() => []);
+    _openEditor(activePageId, pages, container);
+  }
 }
 
 async function _renderPageList(container) {

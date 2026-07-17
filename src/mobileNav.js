@@ -217,45 +217,38 @@ function _getPageContainer() {
 }
 
 async function _onTabClick(tab, project) {
-  // Haptic feedback
   if (navigator.vibrate) navigator.vibrate(10);
 
   _closeAllSheets();
 
-  // Mark active tab immediately for snappy feel
+  // Snappy tab active class toggle
   navEl.querySelectorAll('.mobile-tab').forEach(b => b.classList.remove('active'));
   const tabIdMap = { home: 'mnav-home', story: 'mnav-story', databases: 'mnav-data', canvas: 'mnav-canvas', more: 'mnav-more' };
   document.getElementById(tabIdMap[tab])?.classList.add('active');
 
-  const container = _getPageContainer();
-
   switch (tab) {
     case 'home':
-      await renderMobileDashboard(container);
+      navigate('dashboard');
       break;
-
     case 'story':
-      await renderMobileWrite(container);
+      navigate('write');
       break;
-
     case 'databases':
-      await renderMobileDatabase(container);
+      navigate('databases');
       break;
-
     case 'canvas': {
       try {
         const tabs = await getAllTabs();
         if (tabs && tabs.length > 0) {
           navigate(`workspace/${tabs[0].id}`);
         } else {
-          await renderMobileDashboard(container);
+          navigate('dashboard');
         }
-      } catch (_) { await renderMobileDashboard(container); }
+      } catch (_) { navigate('dashboard'); }
       break;
     }
-
     case 'more':
-      await renderMobileSettings(container);
+      navigate('settings');
       break;
   }
 }

@@ -11,7 +11,9 @@ import {
 
 let _project = null;
 
-export async function renderMobileDatabase(container) {
+
+
+export async function renderMobileDatabase(container, activeSchemaId = null) {
   _project = await getActiveProject();
 
   if (!_project) {
@@ -44,7 +46,8 @@ export async function renderMobileDatabase(container) {
     return;
   }
 
-  await _renderSchemaView(container, schemas, schemas[0]);
+  const activeSchema = (activeSchemaId ? schemas.find(s => s.id === activeSchemaId) : null) || schemas[0];
+  await _renderSchemaView(container, schemas, activeSchema);
 }
 
 async function _renderSchemaView(container, schemas, schema) {

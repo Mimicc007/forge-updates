@@ -134,7 +134,35 @@ async function handleRoute() {
     });
     observer.observe(pageWrapper, { attributes: true, attributeFilter: ['class', 'style'] });
 
-    await match.handler(pageWrapper, match.params);
+
+    const isMobileViewport = () => {
+      return window.innerWidth <= 768 ||
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        (typeof window.Capacitor !== 'undefined' && window.Capacitor?.isNativePlatform?.());
+    };
+
+    if (isMobileViewport()) {
+      const routePath = path.split('/')[0];
+      if (routePath === 'dashboard' || routePath === 'hub') {
+        const { renderMobileDashboard } = await import('./pages/mobileDashboard.js');
+        await renderMobileDashboard(pageWrapper);
+      } else if (routePath === 'settings') {
+        const { renderMobileSettings } = await import('./pages/mobileSettings.js');
+        await renderMobileSettings(pageWrapper);
+      } else if (routePath === 'schema' || routePath === 'databases') {
+        const { renderMobileDatabase } = await import('./pages/mobileDatabase.js');
+        const schemaId = match.params.id;
+        await renderMobileDatabase(pageWrapper, schemaId);
+      } else if (routePath === 'page' || routePath === 'write' || routePath === 'story-timeline' || routePath === 'writer-analytics' || routePath === 'continuity') {
+        const { renderMobileWrite } = await import('./pages/mobileWrite.js');
+        const pageId = match.params.id;
+        await renderMobileWrite(pageWrapper, pageId);
+      } else {
+        await match.handler(pageWrapper, match.params);
+      }
+    } else {
+      await match.handler(pageWrapper, match.params);
+    }
 
     if (pageWrapper._cleanup) {
       container._cleanup = pageWrapper._cleanup;
