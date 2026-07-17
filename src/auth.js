@@ -19,20 +19,19 @@ import {
 } from 'firebase/auth';
 
 // ─── Firebase Config ─────────────────────────────────────────────────────────
-// Values are stored in localStorage so users only enter them once.
-// The developer's config gets hardcoded here once received.
-function _loadConfig() {
-  return {
-    apiKey:            localStorage.getItem('forge-firebase-api-key') || '',
-    authDomain:        localStorage.getItem('forge-firebase-auth-domain') || '',
-    projectId:         localStorage.getItem('forge-firebase-project-id') || '',
-    storageBucket:     localStorage.getItem('forge-firebase-storage-bucket') || '',
-    messagingSenderId: localStorage.getItem('forge-firebase-messaging-sender-id') || '',
-    appId:             localStorage.getItem('forge-firebase-app-id') || ''
-  };
-}
+// Centralised Forge Firebase project — users just sign in, no setup needed.
+const _HARDCODED_CONFIG = {
+  apiKey:            "AIzaSyD-1MHM5jsBOushSkKHGpTWLqfBx36VIeQ",
+  authDomain:        "myforge-app.firebaseapp.com",
+  databaseURL:       "https://myforge-app-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "myforge-app",
+  storageBucket:     "myforge-app.firebasestorage.app",
+  messagingSenderId: "977760622087",
+  appId:             "1:977760622087:web:7055668fd270a7d2893ca2",
+  measurementId:     "G-0BS09ZSQTR"
+};
 
-export const FIREBASE_CONFIG = _loadConfig();
+export const FIREBASE_CONFIG = _HARDCODED_CONFIG;
 
 let _app = null;
 let _auth = null;
@@ -41,16 +40,14 @@ let _currentUser = null;
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 export function isFirebaseConfigured() {
-  const cfg = _loadConfig();
-  return !!(cfg.apiKey && cfg.projectId);
+  return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId);
 }
 
 export function initFirebase() {
   if (!isFirebaseConfigured()) return null;
   if (_app) return _app;
   try {
-    const cfg = _loadConfig();
-    _app = getApps().length > 0 ? getApps()[0] : initializeApp(cfg);
+    _app = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
     _auth = getAuth(_app);
     setPersistence(_auth, browserLocalPersistence).catch(() => {});
     return _app;
