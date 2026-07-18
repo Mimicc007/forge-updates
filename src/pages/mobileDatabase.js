@@ -11,6 +11,16 @@ import {
 
 let _project = null;
 
+// Same hash-based palette desktop's sidebar uses for schema icons, so a given
+// database gets the identical color on both platforms rather than diverging.
+const _SCHEMA_COLORS = ['#f59e0b', '#38bdf8', '#fb7185', '#a78bfa', '#34d399', '#2dd4bf'];
+function _schemaColor(schema) {
+  let sum = 0;
+  const id = schema?.id || '';
+  for (let c = 0; c < id.length; c++) sum += id.charCodeAt(c);
+  return _SCHEMA_COLORS[sum % _SCHEMA_COLORS.length];
+}
+
 
 
 export async function renderMobileDatabase(container, activeSchemaId = null) {
@@ -63,7 +73,7 @@ async function _renderSchemaView(container, schemas, schema) {
       <!-- Schema selector chips -->
       <div class="m-db-schema-strip" id="m-schema-strip">
         ${schemas.map(s => `
-          <button class="m-schema-chip ${s.id === schema.id ? 'active' : ''}" data-schema-id="${s.id}">
+          <button class="m-schema-chip ${s.id === schema.id ? 'active' : ''}" data-schema-id="${s.id}" style="--chip-color:${_schemaColor(s)}">
             ${s.icon || '📋'} ${_esc(s.name)}
           </button>
         `).join('')}
@@ -111,7 +121,7 @@ function _entryItem(entry, schema) {
 
   return `
     <button class="m-list-item" data-entry-id="${entry.id}">
-      <div class="m-list-item-icon">${schema.icon || '📋'}</div>
+      <div class="m-list-item-icon" style="background:color-mix(in srgb, ${_schemaColor(schema)} 14%, transparent); background:rgba(229,169,59,0.12); background:color-mix(in srgb, ${_schemaColor(schema)} 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, ${_schemaColor(schema)} 25%, transparent);">${schema.icon || '📋'}</div>
       <div class="m-list-item-body">
         <div class="m-list-item-title">${_esc(title)}</div>
         ${subtitle ? `<div class="m-list-item-sub">${_esc(subtitle)}</div>` : ''}
@@ -259,8 +269,10 @@ function _injectDbStyles() {
     }
     .m-db-schema-strip::-webkit-scrollbar { display: none; }
     .m-schema-chip {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-default);
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
       border-radius: 20px;
       padding: 7px 14px;
       font-size: 0.82rem;
@@ -270,12 +282,16 @@ function _injectDbStyles() {
       -webkit-tap-highlight-color: transparent;
       transition: all 0.15s;
       font-family: var(--font-body);
+      min-height: 34px;
     }
     .m-schema-chip.active {
-      background: var(--accent-primary);
-      border-color: var(--accent-primary);
-      color: #070b14;
+      background: rgba(148,163,184,0.12);
+      background: color-mix(in srgb, var(--chip-color, var(--accent-primary)) 18%, transparent);
+      border-color: var(--chip-color, var(--accent-primary));
+      color: #fff;
       font-weight: 700;
+      box-shadow: 0 0 12px rgba(148,163,184,0.2);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--chip-color, var(--accent-primary)) 30%, transparent);
     }
   `;
   document.head.appendChild(s);
@@ -299,16 +315,19 @@ function _injectDetailStyles() {
     .m-detail-input {
       width: 100%;
       box-sizing: border-box;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-default);
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
       border-radius: 10px;
       padding: 12px 14px;
       font-size: 0.95rem;
       color: var(--text-primary);
       font-family: var(--font-body);
       outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .m-detail-input:focus { border-color: var(--accent-primary); }
+    .m-detail-input:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgba(229,169,59,0.15); }
     .m-detail-textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
   `;
   document.head.appendChild(s);

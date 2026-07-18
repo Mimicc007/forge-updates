@@ -87,19 +87,19 @@ export async function renderMobileDashboard(container) {
       <div class="m-section">
         <div class="m-section-label">Quick access</div>
         <div class="m-quick-grid">
-          <button class="m-quick-card" data-action="write">
+          <button class="m-quick-card" data-action="write" style="--card-color:#f59e0b">
             <div class="m-quick-icon">✏️</div>
             <div class="m-quick-label">Write</div>
           </button>
-          <button class="m-quick-card" data-action="database">
+          <button class="m-quick-card" data-action="database" style="--card-color:#38bdf8">
             <div class="m-quick-icon">🗄️</div>
             <div class="m-quick-label">Database</div>
           </button>
-          <button class="m-quick-card" data-action="canvas">
+          <button class="m-quick-card" data-action="canvas" style="--card-color:#818cf8">
             <div class="m-quick-icon">🖼️</div>
             <div class="m-quick-label">Canvas</div>
           </button>
-          <button class="m-quick-card" data-action="story">
+          <button class="m-quick-card" data-action="story" style="--card-color:#a78bfa">
             <div class="m-quick-icon">📖</div>
             <div class="m-quick-label">Timeline</div>
           </button>
@@ -188,20 +188,65 @@ function _injectDashboardStyles() {
       gap: 10px;
     }
     .m-quick-card {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 6px;
       padding: 14px 6px;
-      background: var(--bg-surface);
-      border: 1px solid var(--border-default);
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
       border-radius: 14px;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
-      transition: background 0.12s;
+      transition: background 0.12s, transform 0.15s var(--easing-spring, ease), box-shadow 0.15s;
+      box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.03);
+      min-height: 44px;
     }
-    .m-quick-card:active { background: var(--bg-elevated); }
-    .m-quick-icon { font-size: 24px; }
+    .m-quick-card::before, .m-quick-card::after {
+      content: '';
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      opacity: 0.3;
+      pointer-events: none;
+      transition: opacity 0.15s, width 0.15s, height 0.15s;
+    }
+    .m-quick-card::before {
+      top: 4px; left: 4px;
+      border-top: 1.5px solid var(--card-color, var(--accent-primary));
+      border-left: 1.5px solid var(--card-color, var(--accent-primary));
+    }
+    .m-quick-card::after {
+      bottom: 4px; right: 4px;
+      border-bottom: 1.5px solid var(--card-color, var(--accent-primary));
+      border-right: 1.5px solid var(--card-color, var(--accent-primary));
+    }
+    .m-quick-card:active {
+      background: var(--bg-elevated);
+      transform: scale(0.94);
+      box-shadow: var(--shadow-md), 0 0 20px rgba(229,169,59,0.3);
+      box-shadow: var(--shadow-md), 0 0 20px color-mix(in srgb, var(--card-color, #e5a93b) 35%, transparent);
+    }
+    .m-quick-card:active::before, .m-quick-card:active::after {
+      opacity: 1;
+      width: 11px;
+      height: 11px;
+    }
+    .m-quick-icon {
+      font-size: 20px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(229,169,59,0.10);
+      background: color-mix(in srgb, var(--card-color, #e5a93b) 14%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--card-color, #e5a93b) 25%, transparent);
+      border-radius: 10px;
+    }
     .m-quick-label {
       font-size: 0.7rem;
       color: var(--text-secondary);
@@ -233,7 +278,12 @@ function _wordCount(html) {
 
 function _timeAgo(ts) {
   if (!ts) return 'Never';
-  const diff = Date.now() - ts;
+  // updatedAt may be stored as an ISO string or a numeric epoch — normalize
+  // before doing arithmetic, otherwise `Date.now() - ts` silently produces
+  // NaN for strings and every branch below falls through to "NaNd ago".
+  const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
+  if (Number.isNaN(time)) return 'Never';
+  const diff = Date.now() - time;
   const m = Math.floor(diff / 60000);
   if (m < 1) return 'Just now';
   if (m < 60) return `${m}m ago`;

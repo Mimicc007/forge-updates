@@ -67,11 +67,12 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: rgba(255,255,255,0.35);
+  color: var(--tab-color, rgba(255,255,255,0.35));
+  opacity: 0.55;
   font-family: var(--font-body);
   font-size: 10px;
   letter-spacing: 0.03em;
-  transition: color 0.18s;
+  transition: color 0.18s, opacity 0.18s;
   position: relative;
   -webkit-tap-highlight-color: transparent;
   min-height: 64px;
@@ -84,7 +85,8 @@
 }
 
 .mobile-tab.active {
-  color: var(--accent-primary);
+  opacity: 1;
+  filter: drop-shadow(0 0 5px var(--tab-color, transparent));
 }
 
 .mobile-tab.active svg {
@@ -98,6 +100,11 @@
 .mobile-tab .mnav-label {
   font-size: 10px;
   font-weight: 500;
+  color: inherit;
+}
+
+.mobile-tab.active .mnav-label {
+  font-weight: 700;
 }
 
 /* Active tab indicator pip */
@@ -109,9 +116,9 @@
   transform: translateX(-50%);
   width: 24px;
   height: 3px;
-  background: var(--accent-primary);
+  background: var(--tab-color, var(--accent-primary));
   border-radius: 0 0 3px 3px;
-  box-shadow: 0 0 8px var(--accent-primary);
+  box-shadow: 0 0 8px var(--tab-color, var(--accent-primary));
 }
 
 /* Badge */
@@ -193,7 +200,7 @@
 }
 
 .mnav-sheet-icon {
-  font-size: 22px;
+  font-size: 20px;
   width: 36px;
   height: 36px;
   display: flex;
@@ -248,6 +255,8 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-base);
+  background-image: radial-gradient(circle, var(--dot-grid-color, rgba(255,255,255,0.06)) 1px, transparent 1px);
+  background-size: var(--dot-grid-size, 20px) var(--dot-grid-size, 20px);
   padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -255,10 +264,11 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(7,11,20,0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-subtle);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: 0 1px 0 rgba(229,169,59,0.08);
   padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 12px;
   display: flex;
   align-items: center;
@@ -279,24 +289,35 @@
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  padding: 8px;
+  padding: 8px 10px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   -webkit-tap-highlight-color: transparent;
   font-family: var(--font-body);
+  transition: opacity 0.15s;
 }
+.m-header-action:active { opacity: 0.6; }
 
 .m-back-btn {
   background: none;
   border: none;
   color: var(--text-primary);
   cursor: pointer;
-  padding: 8px;
+  padding: 8px 10px;
+  min-width: 44px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 0.9rem;
   -webkit-tap-highlight-color: transparent;
   font-family: var(--font-body);
+  transition: opacity 0.15s;
 }
+.m-back-btn:active { opacity: 0.6; }
 
 .m-back-btn svg {
   width: 20px;
@@ -304,6 +325,10 @@
 }
 
 /* ─── Mobile Cards & Lists ────────────────────────────────────── */
+/* Signature Forge motif: glass surface + amber HUD corner brackets.
+   On desktop these brackets grow on :hover; touch has no hover, so
+   here they sit faintly visible always and flare brighter on :active
+   (i.e. the moment of tap) so the identity still reads on mobile. */
 .m-section {
   padding: 20px 16px 4px;
 }
@@ -317,9 +342,45 @@
   margin-bottom: 10px;
 }
 
+.m-card,
+.m-list-item,
+.m-stat-chip {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.m-card::before, .m-list-item::before, .m-stat-chip::before,
+.m-card::after, .m-list-item::after, .m-stat-chip::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  opacity: 0.35;
+  pointer-events: none;
+  transition: opacity 0.15s, width 0.15s, height 0.15s;
+}
+.m-card::before, .m-list-item::before, .m-stat-chip::before {
+  top: 5px; left: 5px;
+  border-top: 1.5px solid var(--accent-primary);
+  border-left: 1.5px solid var(--accent-primary);
+}
+.m-card::after, .m-list-item::after, .m-stat-chip::after {
+  bottom: 5px; right: 5px;
+  border-bottom: 1.5px solid var(--accent-primary);
+  border-right: 1.5px solid var(--accent-primary);
+}
+.m-card:active::before, .m-list-item:active::before, .m-stat-chip:active::before,
+.m-card:active::after, .m-list-item:active::after, .m-stat-chip:active::after {
+  opacity: 1;
+  width: 13px;
+  height: 13px;
+}
+
 .m-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
   border-radius: 14px;
   padding: 16px;
   margin-bottom: 10px;
@@ -330,13 +391,12 @@
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
+  min-height: 44px;
   border-radius: 12px;
   margin-bottom: 8px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.12s;
+  transition: background 0.12s, transform 0.15s var(--easing-spring, ease), box-shadow 0.15s;
   width: 100%;
   text-align: left;
   box-sizing: border-box;
@@ -344,13 +404,16 @@
 
 .m-list-item:active {
   background: var(--bg-elevated);
+  transform: scale(0.98);
+  box-shadow: var(--shadow-md), 0 0 20px rgba(229,169,59,0.12);
 }
 
 .m-list-item-icon {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: rgba(251,191,36,0.12);
+  background: rgba(229,169,59,0.12);
+  box-shadow: inset 0 0 0 1px rgba(229,169,59,0.18);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -406,10 +469,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 20px rgba(251,191,36,0.4);
+  box-shadow: 0 4px 20px rgba(229,169,59,0.4), 0 0 32px rgba(229,169,59,0.22);
   z-index: 200;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
 }
 
 .m-fab:active {
@@ -465,13 +528,18 @@
   padding: 10px 14px;
   white-space: nowrap;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
 .m-stat-chip-value {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  color: var(--accent-primary);
+  font-variant-numeric: tabular-nums;
   font-family: var(--font-heading);
+  background: linear-gradient(135deg, #fafafa 40%, rgba(229,169,59,0.85) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .m-stat-chip-label {
@@ -538,11 +606,14 @@
 
 /* ─── Mobile settings list ────────────────────────────────────── */
 .m-settings-group {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: 14px;
   margin: 0 16px 16px;
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
 .m-settings-row {
@@ -559,8 +630,13 @@
 
 .m-settings-row-icon {
   font-size: 18px;
-  width: 28px;
-  text-align: center;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  flex-shrink: 0;
 }
 
 .m-settings-row-body {
@@ -584,11 +660,12 @@
 
 /* ─── Mobile Dashboard Hero ───────────────────────────────────── */
 .m-hero {
+  position: relative;
   padding: calc(24px + env(safe-area-inset-top, 0px)) 20px 20px;
-  background: linear-gradient(180deg,
-    rgba(251,191,36,0.05) 0%,
-    transparent 100%
-  );
+  background:
+    radial-gradient(ellipse 90% 60% at 30% 0%, rgba(229,169,59,0.10) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(229,169,59,0.04) 0%, transparent 100%);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .m-hero-greeting {
@@ -600,11 +677,14 @@
 }
 
 .m-hero-name {
-  font-size: 1.75rem;
+  font-size: 1.85rem;
   font-weight: 800;
   font-family: var(--font-heading);
-  color: var(--text-primary);
   letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #fafafa 55%, rgba(229,169,59,0.9) 130%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .m-hero-project {

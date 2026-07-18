@@ -153,10 +153,22 @@ async function handleRoute() {
         const { renderMobileDatabase } = await import('./pages/mobileDatabase.js');
         const schemaId = match.params.id;
         await renderMobileDatabase(pageWrapper, schemaId);
-      } else if (routePath === 'page' || routePath === 'write' || routePath === 'story-timeline' || routePath === 'writer-analytics' || routePath === 'continuity') {
+      } else if (routePath === 'page' || routePath === 'write') {
         const { renderMobileWrite } = await import('./pages/mobileWrite.js');
         const pageId = match.params.id;
         await renderMobileWrite(pageWrapper, pageId);
+      } else if (routePath === 'story-timeline') {
+        const { renderMobileTimeline } = await import('./pages/mobileTimeline.js');
+        await renderMobileTimeline(pageWrapper);
+      } else if (routePath === 'continuity') {
+        const { renderMobileContinuity } = await import('./pages/mobileContinuity.js');
+        await renderMobileContinuity(pageWrapper);
+      } else if (routePath === 'writer-analytics') {
+        const { renderMobileAnalytics } = await import('./pages/mobileAnalytics.js');
+        await renderMobileAnalytics(pageWrapper);
+      } else if (routePath === 'graph') {
+        const { renderMobileGraph } = await import('./pages/mobileGraph.js');
+        await renderMobileGraph(pageWrapper);
       } else {
         await match.handler(pageWrapper, match.params);
       }

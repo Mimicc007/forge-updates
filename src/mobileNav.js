@@ -83,7 +83,7 @@ async function _render(project) {
   navEl.id = 'mobile-nav';
   navEl.setAttribute('aria-label', 'Mobile navigation');
   navEl.innerHTML = `
-    <button class="mobile-tab" id="mnav-home" data-tab="home" title="Dashboard">
+    <button class="mobile-tab" id="mnav-home" data-tab="home" title="Dashboard" style="--tab-color:#f59e0b">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
         <path d="M9 21V12h6v9"/>
@@ -91,7 +91,7 @@ async function _render(project) {
       <span class="mnav-label">Home</span>
     </button>
 
-    <button class="mobile-tab" id="mnav-data" data-tab="databases" title="Databases">
+    <button class="mobile-tab" id="mnav-data" data-tab="databases" title="Databases" style="--tab-color:#38bdf8">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <ellipse cx="12" cy="5" rx="9" ry="3"/>
         <path d="M21 12c0 1.657-4.03 3-9 3S3 13.657 3 12"/>
@@ -100,14 +100,14 @@ async function _render(project) {
       <span class="mnav-label">Data</span>
     </button>
 
-    <button class="mobile-tab" id="mnav-story" data-tab="story" title="Story Timeline">
+    <button class="mobile-tab" id="mnav-story" data-tab="story" title="Story Timeline" style="--tab-color:#a78bfa">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
       </svg>
       <span class="mnav-label">Story</span>
     </button>
 
-    <button class="mobile-tab" id="mnav-canvas" data-tab="canvas" title="Canvas">
+    <button class="mobile-tab" id="mnav-canvas" data-tab="canvas" title="Canvas" style="--tab-color:#818cf8">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="7" height="7" rx="1"/>
         <rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -117,7 +117,7 @@ async function _render(project) {
       <span class="mnav-label">Canvas</span>
     </button>
 
-    <button class="mobile-tab" id="mnav-more" data-tab="more" title="More" style="position:relative">
+    <button class="mobile-tab" id="mnav-more" data-tab="more" title="More" style="position:relative; --tab-color:#94a3b8">
       ${badgeCount > 0 ? `<span class="mnav-badge">${badgeCount > 9 ? '9+' : badgeCount}</span>` : ''}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <line x1="3" y1="6" x2="21" y2="6"/>
@@ -137,28 +137,28 @@ async function _render(project) {
     <div class="mnav-sheet-handle"></div>
     <div class="mnav-sheet-title">More tools</div>
     <button class="mnav-sheet-item" data-action="ignis">
-      <span class="mnav-sheet-icon">⚡</span>
+      <span class="mnav-sheet-icon" style="background:rgba(245,158,11,0.14); box-shadow: inset 0 0 0 1px rgba(245,158,11,0.25);">⚡</span>
       <div class="mnav-sheet-item-text">
         <strong>Ignis AI Companion</strong>
         <span>Chat with your creative partner</span>
       </div>
     </button>
     <button class="mnav-sheet-item" data-action="graph">
-      <span class="mnav-sheet-icon">🕸️</span>
+      <span class="mnav-sheet-icon" style="background:rgba(45,212,191,0.14); box-shadow: inset 0 0 0 1px rgba(45,212,191,0.25);">🕸️</span>
       <div class="mnav-sheet-item-text">
         <strong>Relationship Graph</strong>
         <span>Visual character & lore connections</span>
       </div>
     </button>
     <button class="mnav-sheet-item" data-action="analytics">
-      <span class="mnav-sheet-icon">📊</span>
+      <span class="mnav-sheet-icon" style="background:rgba(74,222,128,0.14); box-shadow: inset 0 0 0 1px rgba(74,222,128,0.25);">📊</span>
       <div class="mnav-sheet-item-text">
         <strong>Writer Analytics</strong>
         <span>Word counts, writing streaks</span>
       </div>
     </button>
     <button class="mnav-sheet-item" data-action="continuity">
-      <span class="mnav-sheet-icon">🔍</span>
+      <span class="mnav-sheet-icon" style="background:rgba(248,113,113,0.14); box-shadow: inset 0 0 0 1px rgba(248,113,113,0.25);">🔍</span>
       <div class="mnav-sheet-item-text">
         <strong>Continuity Engine</strong>
         <span>${badgeCount > 0 ? `${badgeCount} issue${badgeCount > 1 ? 's' : ''} found` : 'Check for plot holes'}</span>
@@ -166,14 +166,14 @@ async function _render(project) {
     </button>
     <div class="mnav-sheet-divider"></div>
     <button class="mnav-sheet-item" data-action="settings">
-      <span class="mnav-sheet-icon">⚙️</span>
+      <span class="mnav-sheet-icon" style="background:rgba(148,163,184,0.14); box-shadow: inset 0 0 0 1px rgba(148,163,184,0.25);">⚙️</span>
       <div class="mnav-sheet-item-text">
         <strong>Settings</strong>
         <span>Theme, AI, preferences</span>
       </div>
     </button>
     <button class="mnav-sheet-item" data-action="hub">
-      <span class="mnav-sheet-icon">📂</span>
+      <span class="mnav-sheet-icon" style="background:rgba(245,158,11,0.14); box-shadow: inset 0 0 0 1px rgba(245,158,11,0.25);">📂</span>
       <div class="mnav-sheet-item-text">
         <strong>Switch Project</strong>
         <span>Open or create another project</span>
@@ -234,8 +234,8 @@ async function _onTabClick(tab, project) {
       navigate('write');
       break;
     case 'databases':
-      navigate('databases');
-      break;
+      _showDbSheet(project);
+      return; // opened the sheet directly — don't fall through to closing it
     case 'canvas': {
       try {
         const tabs = await getAllTabs();
@@ -248,8 +248,8 @@ async function _onTabClick(tab, project) {
       break;
     }
     case 'more':
-      navigate('settings');
-      break;
+      _toggleMoreSheet();
+      return; // opened the sheet directly — don't fall through to closing it
   }
 }
 
@@ -344,196 +344,31 @@ function _updateActiveTab() {
   const map = {
     'dashboard': 'mnav-home',
     'schema':    'mnav-data',
+    'databases': 'mnav-data',
     'page':      'mnav-story',
+    'write':     'mnav-story',
     'story-timeline': 'mnav-story',
     'workspace': 'mnav-canvas',
     'settings':  'mnav-more',
     'hub':       'mnav-home',
+    'graph':     'mnav-more',
+    'writer-analytics': 'mnav-more',
+    'continuity': 'mnav-more',
   };
   const id = map[hash] || 'mnav-home';
   document.getElementById(id)?.classList.add('active');
 }
 
 // ─── Style Injection ──────────────────────────────────────────────────────────
-
+// Nav bar, tab, and sheet styling now lives entirely in mobile.css (the shared
+// stylesheet loaded once at boot) to avoid two competing style sources fighting
+// over the same classes. This only adds the DB-sheet-item styles that mobile.css
+// doesn't define yet.
 function _injectStyles() {
   if (document.getElementById('mobile-nav-styles')) return;
   const style = document.createElement('style');
   style.id = 'mobile-nav-styles';
   style.textContent = `
-    /* ── Mobile Nav Bar ─────────────────────────────── */
-    #mobile-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 64px;
-      padding-bottom: env(safe-area-inset-bottom, 0px);
-      background: var(--glass-bg, rgba(7,11,20,0.97));
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border-top: 1px solid var(--glass-border, rgba(255,255,255,0.08));
-      display: flex;
-      align-items: stretch;
-      justify-content: space-around;
-      z-index: 9000;
-      box-shadow: 0 -4px 24px rgba(0,0,0,0.35);
-    }
-
-    /* ── Tab Buttons ─────────────────────────────────── */
-    .mobile-tab {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 3px;
-      flex: 1;
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--text-tertiary, #64748b);
-      transition: color 0.18s ease, transform 0.18s ease;
-      position: relative;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-      padding: 0;
-      min-height: 0;
-    }
-    .mobile-tab:active {
-      transform: scale(0.92);
-    }
-    .mobile-tab.active {
-      color: var(--accent-primary, #f1f5f9);
-    }
-    .mobile-tab svg {
-      width: 22px;
-      height: 22px;
-    }
-    .mnav-label {
-      font-size: 9.5px;
-      font-family: var(--font-hud, monospace);
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      font-weight: 600;
-      line-height: 1;
-    }
-    .mnav-badge {
-      position: absolute;
-      top: 4px;
-      right: 50%;
-      margin-right: -20px;
-      background: #ef4444;
-      color: white;
-      border-radius: 999px;
-      font-size: 9px;
-      font-weight: 700;
-      min-width: 16px;
-      height: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 3px;
-      pointer-events: none;
-    }
-
-    /* ── Backdrop ────────────────────────────────────── */
-    #mobile-sheet-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.55);
-      z-index: 8998;
-      backdrop-filter: blur(2px);
-      -webkit-backdrop-filter: blur(2px);
-    }
-    #mobile-sheet-backdrop.open { display: block; }
-
-    /* ── Sheets (More + DB) ──────────────────────────── */
-    #mobile-more-sheet,
-    #mobile-db-sheet {
-      position: fixed;
-      bottom: 64px;
-      bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-      left: 0;
-      right: 0;
-      background: var(--bg-elevated, #1e293b);
-      border-top: 1px solid var(--border-default);
-      border-radius: 20px 20px 0 0;
-      z-index: 8999;
-      transform: translateY(110%);
-      transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
-      max-height: 78dvh;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      padding-bottom: 12px;
-    }
-    #mobile-more-sheet.open,
-    #mobile-db-sheet.open {
-      transform: translateY(0);
-    }
-
-    /* ── Sheet Handle ────────────────────────────────── */
-    .mnav-sheet-handle {
-      width: 40px;
-      height: 4px;
-      background: var(--border-strong, rgba(255,255,255,0.18));
-      border-radius: 9999px;
-      margin: 12px auto 6px;
-    }
-    .mnav-sheet-title {
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--text-muted, #374151);
-      padding: 4px 24px 12px;
-      font-family: var(--font-hud);
-    }
-
-    /* ── More Sheet Items ────────────────────────────── */
-    .mnav-sheet-item {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 13px 24px;
-      cursor: pointer;
-      transition: background 0.12s ease;
-      -webkit-tap-highlight-color: transparent;
-      background: none;
-      border: none;
-      width: 100%;
-      text-align: left;
-      color: var(--text-primary);
-    }
-    .mnav-sheet-item:active { background: var(--bg-hover, #1e2d42); }
-    .mnav-sheet-icon {
-      font-size: 1.35rem;
-      width: 32px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-    .mnav-sheet-item-text {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-    }
-    .mnav-sheet-item-text strong {
-      font-size: 0.9rem;
-      font-weight: 600;
-      font-family: var(--font-heading);
-      color: var(--text-primary);
-    }
-    .mnav-sheet-item-text span {
-      font-size: 0.75rem;
-      color: var(--text-muted, #64748b);
-    }
-    .mnav-sheet-divider {
-      height: 1px;
-      background: var(--border-subtle, rgba(255,255,255,0.05));
-      margin: 6px 24px;
-    }
-
-    /* ── DB Sheet Items ──────────────────────────────── */
     .mnav-db-item {
       display: flex;
       align-items: center;
@@ -546,6 +381,7 @@ function _injectStyles() {
       border: none;
       width: 100%;
       text-align: left;
+      min-height: 44px;
     }
     .mnav-db-item:active { background: var(--bg-hover, #1e2d42); }
     .mnav-db-icon { font-size: 1.25rem; width: 28px; text-align: center; flex-shrink: 0; }

@@ -34,7 +34,7 @@ export async function renderMobileSettings(container) {
       <div style="padding:0 16px 4px;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted)">Appearance</div>
       <div class="m-settings-group">
         <div class="m-settings-row" id="m-theme-row" style="cursor:pointer">
-          <div class="m-settings-row-icon">🎨</div>
+          <div class="m-settings-row-icon" style="background:rgba(167,139,250,0.14);box-shadow:inset 0 0 0 1px rgba(167,139,250,0.25)">🎨</div>
           <div class="m-settings-row-body">
             <div class="m-settings-row-label">Theme</div>
             <div class="m-settings-row-sub" id="m-theme-label">${theme === 'dark' ? 'Dark' : 'Light'}</div>
@@ -49,7 +49,7 @@ export async function renderMobileSettings(container) {
       <div style="padding:0 16px 4px;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted)">AI</div>
       <div class="m-settings-group">
         <div class="m-settings-row">
-          <div class="m-settings-row-icon">⚡</div>
+          <div class="m-settings-row-icon" style="background:rgba(245,158,11,0.14);box-shadow:inset 0 0 0 1px rgba(245,158,11,0.25)">⚡</div>
           <div class="m-settings-row-body">
             <div class="m-settings-row-label">Ignis Companion</div>
             <div class="m-settings-row-sub">Your AI writing partner</div>
@@ -60,7 +60,7 @@ export async function renderMobileSettings(container) {
           </label>
         </div>
         <div class="m-settings-row">
-          <div class="m-settings-row-icon">🤖</div>
+          <div class="m-settings-row-icon" style="background:rgba(148,163,184,0.14);box-shadow:inset 0 0 0 1px rgba(148,163,184,0.25)">🤖</div>
           <div class="m-settings-row-body">
             <div class="m-settings-row-label">Model</div>
             <div class="m-settings-row-sub">${aiModel}</div>
@@ -72,7 +72,7 @@ export async function renderMobileSettings(container) {
       <div style="padding:0 16px 4px;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted)">Project</div>
       <div class="m-settings-group">
         <button class="m-settings-row" id="m-switch-project" style="cursor:pointer;width:100%;text-align:left">
-          <div class="m-settings-row-icon">📂</div>
+          <div class="m-settings-row-icon" style="background:rgba(245,158,11,0.14);box-shadow:inset 0 0 0 1px rgba(245,158,11,0.25)">📂</div>
           <div class="m-settings-row-body">
             <div class="m-settings-row-label">Switch Project</div>
           </div>
@@ -81,7 +81,7 @@ export async function renderMobileSettings(container) {
           </div>
         </button>
         <button class="m-settings-row" id="m-open-settings" style="cursor:pointer;width:100%;text-align:left">
-          <div class="m-settings-row-icon">⚙️</div>
+          <div class="m-settings-row-icon" style="background:rgba(148,163,184,0.14);box-shadow:inset 0 0 0 1px rgba(148,163,184,0.25)">⚙️</div>
           <div class="m-settings-row-body">
             <div class="m-settings-row-label">Full Settings</div>
           </div>

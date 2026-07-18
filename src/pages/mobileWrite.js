@@ -231,7 +231,9 @@ function _closeEditor() {
 
 function _timeAgo(ts) {
   if (!ts) return 'Never';
-  const diff = Date.now() - ts;
+  const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
+  if (Number.isNaN(time)) return 'Never';
+  const diff = Date.now() - time;
   const m = Math.floor(diff / 60000);
   if (m < 1) return 'Just now';
   if (m < 60) return `${m}m ago`;

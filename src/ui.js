@@ -208,7 +208,7 @@ let quillModule = null;
 let quillCssLoaded = false;
 
 export async function loadQuill() {
-  if (quillModule) return quillModule.default;
+  if (quillModule) return quillModule.default?.default || quillModule.default;
 
   if (!quillCssLoaded) {
     const link = document.createElement('link');
@@ -219,7 +219,12 @@ export async function loadQuill() {
   }
 
   quillModule = await import('quill');
-  const Quill = quillModule.default;
+  // Defensive unwrap: in some production (Rollup) builds, quill's CJS default
+  // export comes back double-nested (quillModule.default.default) in a way
+  // it doesn't in Vite's dev server. Without this, `new Quill(...)` still
+  // "succeeds" but produces an object missing the real prototype (.on, etc),
+  // which surfaces later as a cryptic "X.on is not a function" crash.
+  const Quill = quillModule.default?.default || quillModule.default;
 
   // Custom Link Blot to override default Quill 2 sanitization
   // This allows local hash links (#/page/someId) to function without being sanitized to about:blank
