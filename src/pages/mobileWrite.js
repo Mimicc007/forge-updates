@@ -181,13 +181,12 @@ async function _initQuill(page) {
   root.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden';
 
   // Instantiate the shared, features-rich, IME-shielded editor
-  _quill = await createEditor(root, {
+  const editorObj = await createEditor(root, {
     placeholder: 'Begin writing…',
     initialContent: page.content || '',
     minimal: false
   });
-
-
+  _quill = editorObj.quill;
 
   _quill.on('text-change', () => {
     _scheduleSave({ content: _quill.root.innerHTML });
